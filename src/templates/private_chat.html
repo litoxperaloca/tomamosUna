@@ -1,0 +1,32 @@
+<ion-modal-view class="private_chat_modal">
+  <ion-content>
+      <div class="chat_top_bar">
+        <div class="chat_other_user_picture" style="background: url({{chat.other_user.picture_url}}) no-repeat center;"></div>
+        <div class="chat_other_user_name">{{chat.other_user.username}}</div>
+        <div ng-click="close_message_modal()" class="close_message_modal">X</div>
+      </div>
+      <ion-scroll direction="y" class="private_chat_scroll" delegate-handle="content">
+        <div ng-repeat="message in chat.messages track by $index" class="message">
+          <a id="message-{{message.nid}}"></a>
+          <div class="author">
+            {{getNameFromUid(message.uid)}}:
+          </div>
+          <div class="text">
+            {{message.texto}}
+          </div>
+          <div class="date">
+            {{timeConverter(message.created)}}
+          </div>
+        </div>
+        <div style="height: 20px"></div>
+      </ion-scroll>
+      <div class="chat_message_options">
+        <textarea ng-keyUp="key_press($event,'private_chat')" id="message_text_area" class="chat_message_textarea" ng-model="chat.new_text_message"></textarea>
+        <div ng-click="send_message_ok()" class="send_message_button">
+          OK
+        </div>
+      </div>
+      <div style="height: 150px"></div>
+    </ion-content>
+    <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
+</ion-modal-view>

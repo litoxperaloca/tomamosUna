@@ -1,0 +1,40 @@
+{
+  "name": "tomamos_una",
+  "devDependencies": {
+    "ionic": "driftyco/ionic-bower#1.1.0"
+  },
+  "dependencies": {
+    "ngCordova": "~0.1.12-alpha",
+    "angular-leaflet-directive": "~0.8.8",
+    "Leaflet.EasyButton": "~1.1.2",
+    "underscore": "~1.8.3",
+    "ion-autocomplete": "master",
+    "Proj4Leaflet": "proj4leaflet#~0.7.2"
+  },
+  "version": "1.0.0",
+  "homepage": "http://tomamosuna.thor.datauy.org",
+  "authors": [
+    "Pablo Pignolo <pablo.pignolo@gmail.com"
+  ],
+  "license": "MIT",
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "www/lib",
+    "test",
+    "tests"
+  ],
+  "description": "Mobile APP for Tomamos Una website",
+  "main": "app.js",
+  "moduleType": [
+    "globals"
+  ],
+  "keywords": [
+    "im",
+    "data"
+  ],
+  "resolutions": {
+    "ion-autocomplete": "master"
+  }
+}
