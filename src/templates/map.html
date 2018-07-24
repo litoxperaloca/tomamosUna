@@ -1,7 +1,6 @@
 <ion-view title="{{AppName}}-Map" hide-nav-bar="true">
 
 <ion-nav-title>
-
 </ion-nav-title>
 
 <div id="spinner" class="intro-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
@@ -14,11 +13,21 @@
 
 
 <ion-content data-tap-disabled="true">
-
   <leaflet defaults="map.defaults" center="map.center" markers="map.markers" ng-if="map"></leaflet>
-
 </ion-content>
 
+<div id="notifications">
+  <div id="notification_{{notification.nid}}" class="notification_item" ng-repeat="notification in notifications track by $index">
+    <p class="text">{{notification.titulo}} - {{notification.username}}</p>
+    <p class="date">{{timeConverter(notification.created)}}</p>
+    <div class="invitation_button" ng-click="openNotification({{notification.nid}})">
+      Abrir
+    </div>
+    <div class="invitation_button" ng-click="closeNotification({{notification.nid}})">
+      Cerrar
+    </div>
+  </div>
+</div>
 
 
 <div id="foot_bar" class="foot-bar">

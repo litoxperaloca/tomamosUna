@@ -1,6 +1,6 @@
 pmb_im.services.factory('PinService', ['$http', 'leafletData','ConfigService', function($http, leafletData, ConfigService) {
 
-  var pinsURL = ConfigService.baseURL + "/sites/tomamos_una/files/json/online_users_geo.json";
+  var pinsURL = ConfigService.baseURL + "/sites/tomamos_una/files/json/users_geo.json";
   var apiURL = ConfigService.baseURL + "/api/"
 /**
    * Constructor, with class name
@@ -14,8 +14,8 @@ pmb_im.services.factory('PinService', ['$http', 'leafletData','ConfigService', f
     return $http.get(pinsURL, {cache: false, params: {hash_id:Math.random()}});
   }
 
-  Pin.sendUserLocation = function(latitude,longitude,username,password){
-    var body = 'user='+username+'&password='+password+'&lat='+latitude+'&lon='+longitude;
+  Pin.sendUserLocation = function(latitude,longitude,username,password,uid){
+    var body = 'user='+username+'&password='+password+'&lat='+latitude+'&lon='+longitude+"&uid="+uid;
     return $http.post(apiURL + 'send_user_position', body,{withCredentials: true, headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
 
   }

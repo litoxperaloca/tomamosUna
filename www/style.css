@@ -1142,3 +1142,25 @@ margin-right: 10px;
 margin-top: 10px;
 
 }
+
+.notification_item{
+  width: 100%;
+  padding: 10px;
+  background-color: #ffffff;
+  margin-bottom: 10px;
+  position: relative;
+  height: 120px;
+  border-radius: 15px;
+}
+
+.notification_item .date{
+  color: grey;
+  font-size: 10pt;
+}
+
+#notifications{
+  position: absolute;
+  top: 5px;
+  left: 17%;
+  width: 80%;
+}

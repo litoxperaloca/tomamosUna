@@ -26,6 +26,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
   'ModalService',
   'SemaphoreService',
   'ValidationService',
+  'NotificationService',
   function(
     $scope,
     _,
@@ -55,7 +56,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     MapService,
     ModalService,
     SemaphoreService,
-    ValidationService
+    ValidationService,
+    NotificationService
   ) {
 
     /**
@@ -93,8 +95,53 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       }else{
         MapService.centerMapOnCoords(-34.901113, -56.164531, 14);
       }
+      $scope.checkNotifications();
     });
 
+    $scope.checkNotifications = function(){
+      if($scope.myIntervals['notifications']){
+        $interval.cancel($scope.myIntervals['notifications']);
+      }
+      $scope.myIntervals['notifications']= $interval(function() {
+        if(UserService.uid){
+          NotificationService.getUnrecivedNotifications(UserService.name, UserService.password).then(function(resp){
+            var data = $scope.getObjectDataFromResponse(resp);
+            if(!(data.Status && data.Status=="error")){
+              $scope.notifications = $scope.getObjectDataFromResponse(data).Notifications;
+            }
+          });
+        }
+      }, 3000);
+    };
+
+    $scope.openNotification = function(nid){
+      var newNotificationArray = new Array();
+      $scope.notifications.forEach(function(notification,key){
+        if(notification.nid==nid){
+          if(notification.tipo=="nuevo_mensaje"){
+            $scope.send_message_to(notification.uid);
+          }else if(notification.tipo=="invitacion_a_trago"){
+            $scope.openInvitationsModal(notification.uid);
+          }else if(notification.tipo=="respuesta_a_invitacion"){
+            $scope.openInvitationsModal(notification.uid);
+          }
+        }else{
+          newNotificationArray.push(notification);
+        }
+      });
+      $scope.notifications = newNotificationArray;
+    }
+
+    $scope.closeNotification = function(nid){
+      var newNotificationArray = new Array();
+      $scope.notifications.forEach(function(notification,key){
+        if(notification.nid==nid){
+        }else{
+          newNotificationArray.push(notification);
+        }
+      });
+      $scope.notifications = newNotificationArray;
+    }
 
     $scope.openWebsite = function(url) {
       var options = {
@@ -354,10 +401,6 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         $scope.usersVisible = [];
           $scope.online_user_geo_array.forEach(function(layer,key){
             var shouldBeVisible = mapBounds.contains(layer.getLatLng());
-            mapBounds._northEast.lat = mapBounds._northEast.lat + 0.003;
-            mapBounds._northEast.lon = mapBounds._northEast.lon - 0.003;
-            mapBounds._southWest.lat = mapBounds._southWest.lat - 0.003;
-            mapBounds._southWest.lon = mapBounds._southWest.lon + 0.003;
             if (!shouldBeVisible) {
                 map.removeLayer(layer);
             } else if (shouldBeVisible) {
@@ -401,12 +444,17 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                     var lon = feature.geometry.coordinates[0];
                     var lat = feature.geometry.coordinates[1];
                     if(lon&&lat){
+                      var onlineStatus = feature.properties.Online_status;
                       var icon = feature.properties.Icon;
                       if(icon=="anon"){
                         icon = "./img/icon-user-anonymous.png";
                       }
+                      var icon_shadow = './img/generic_pin_red.png';
+                      if(onlineStatus=="Online"){
+                        icon_shadow = './img/generic_pin_green.png';
+                      }
                       var markerIcon = L.icon({
-                        shadowUrl: './img/generic_pin_green.png',
+                        shadowUrl: icon_shadow,
                         shadowSize:   [100, 138],
                         shadowAnchor: [44, 138],
                         iconUrl: icon,
@@ -423,8 +471,9 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                         var interested = feature.properties.InterestedIn;
                         var status = feature.properties.Status;
                         var gender = feature.properties.Gender;
+                        //var onlineStatus = feature.properties.Online_status;
                         //feature.properties.Cantalk = $scope.canTalkToUser(feature.properties.Uid,0);
-                        MessageService.canTalkToUsers[uid]==0;
+                        //MessageService.canTalkToUsers[uid]==0;
                         if(UserService.uid && UserService.uid==uid){
                           name = "Tú: "+name;
                         }
@@ -434,6 +483,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                         html = html +'<p><img class="img_inside_marker_popup" src="'+icon+'"/></p>';
                         html = html +'<p class="status_inside_marker_popup">"'+status+'"</p>';
                         html = html +'<p class="interested_inside_marker_popup">Interesad@ en '+interested+'</p>';
+                        html = html +'<p class="lastupdate_inside_marker_popup">'+onlineStatus+'</p>';
                         html = html +'<p class="lastupdate_inside_marker_popup">'+lastUpdate+'</p>';
                         if(!UserService.uid || UserService.uid!=uid){
                           html = html +'<p class="message_icon_inside_marker_popup"><img ng-click="send_message_to('+uid+');" src="./img/message_icon.png" />';
@@ -446,17 +496,17 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                     }
                   }
               });
-              $scope.checkTalkStatus();
               document.getElementById("spinner").style.display = "none";
               $scope.hideOffScreenPins();
             }
+            $scope.checkTalkStatus();
           });
 
         });
     }
 
     $scope.checkTalkStatus = function(){
-      $scope.myIntervals['canTalk'] = $interval(function() {
+      //$scope.myIntervals['canTalk'] = $interval(function() {
         if(SemaphoreService.takeIfAvailable("can_talk")){
           MessageService.checkWhoCanTalk(UserService.name,UserService.password).then(function(resp){
             //SemaphoreService.makeAvailableAgain("submit-form");
@@ -469,7 +519,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
             }
           });
         }
-      }, 2000);
+      //}, 2000);
     };
 
     $scope.key_press = function(event,stage){
@@ -494,67 +544,77 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         if(SemaphoreService.takeIfAvailable("open-modal")){
           document.getElementById("spinner").style.display = "block";
           if(UserService.uid){
-            if(!$scope.canTalkToUser(uid)){
-              SemaphoreService.makeAvailableAgain("open-modal");
-              document.getElementById("spinner").style.display = "none";
-              var alertPopup = $ionicPopup.alert({
-               title: "Invita algo de tomar",
-               template: "Debe tener al menos una invitación a un trago aceptada entre usted y esta persona para poder hablar."
-              });
-              alertPopup.then(function(res) {
-                //return false;
-              });
-            }else{
-              $scope.chat = new Array();
-              $scope.chat.other_user = new Array();
-              $scope.chat.other_user.uid = uid;
-              $scope.chat.messages = new Array();
-              $scope.chat.new_text_message = "";
-              MessageService.getUserInfo(uid).then(function(resp){
-                if($scope.getObjectDataFromResponse(resp).Photo){
-                  $scope.chat.other_user.picture_url = $scope.getObjectDataFromResponse(resp).Photo;
-                }else{
-                  $scope.chat.other_user.picture_url = "./img/icon-user-anonymous.png";
-                }
-                $scope.chat.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
-                var author_uid = UserService.uid;
-                MessageService.getAllMessagesToUser(UserService.name, UserService.password,uid,author_uid).then(function(resp2){
-                  var data = $scope.getObjectDataFromResponse(resp2);
-                  if(!(data.Status && data.Status=="error")){
-                    $scope.chat.messages = $scope.getObjectDataFromResponse(resp2);
-                  }
-                  if($scope.myIntervals['privateMessage']){
-                    $interval.cancel($scope.myIntervals['privateMessage']);
-                  }
-                  $scope.myIntervals['privateMessage'] = $interval(function() {
-                                  MessageService.getAllMessagesToUser(UserService.name, UserService.password,$scope.chat.other_user.uid,UserService.uid).then(function(resp3){
-                                    var data2 = $scope.getObjectDataFromResponse(resp3);
-                                    if(!(data2.Status && data2.Status=="error")){
-                                      $scope.chat.messages = $scope.getObjectDataFromResponse(data2);
-                                      var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
-                                      $scope.scrollMe("message-"+mnid);
-                                    }
-                                  });
-                                }, 5000);
-                  $ionicModal.fromTemplateUrl('templates/private_chat.html', {
-                      scope: $scope,
-                      hardwareBackButtonClose: false,
-                      animation: 'slide-in-up',
-                      //focusFirstInput: true
-                    }).then(function(modal) {
-                        document.getElementById("spinner").style.display = "none";
-                        document.getElementById("user-options-menu").style.display="none";
-                        ModalService.checkNoModalIsOpen();
-                        ModalService.activeModal = modal;
-                        document.getElementById("foot_bar").style.display = "none";
-                        ModalService.activeModal.show();
-                        SemaphoreService.makeAvailableAgain("open-modal");
-                        var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
-                        $scope.scrollMe("message-"+mnid);
+              MessageService.checkWhoCanTalk(UserService.name,UserService.password).then(function(resp){
+                //SemaphoreService.makeAvailableAgain("submit-form");
+                var data = $scope.getObjectDataFromResponse(resp);
+                if(!(data.Status && data.Status=="error")){
+                  data.forEach(function(uid){
+                    MessageService.canTalkToUsers['uid-'+uid] = 1;
+                  });
+                  if(!$scope.canTalkToUser(uid)){
+                    SemaphoreService.makeAvailableAgain("open-modal");
+                    document.getElementById("spinner").style.display = "none";
+                    var alertPopup = $ionicPopup.alert({
+                     title: "Invita algo de tomar",
+                     template: "Debe tener al menos una invitación a un trago aceptada entre usted y esta persona para poder hablar."
                     });
-                });
+                    alertPopup.then(function(res) {
+                      //return false;
+                    });
+                  }else{
+                    $scope.chat = new Array();
+                    $scope.chat.other_user = new Array();
+                    $scope.chat.other_user.uid = uid;
+                    $scope.chat.messages = new Array();
+                    $scope.chat.new_text_message = "";
+                    MessageService.getUserInfo(uid).then(function(resp){
+                      if($scope.getObjectDataFromResponse(resp).Photo){
+                        $scope.chat.other_user.picture_url = $scope.getObjectDataFromResponse(resp).Photo;
+                      }else{
+                        $scope.chat.other_user.picture_url = "./img/icon-user-anonymous.png";
+                      }
+                      $scope.chat.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
+                      var author_uid = UserService.uid;
+                      MessageService.getAllMessagesToUser(UserService.name, UserService.password,uid,author_uid).then(function(resp2){
+                        var data = $scope.getObjectDataFromResponse(resp2);
+                        if(!(data.Status && data.Status=="error")){
+                          $scope.chat.messages = $scope.getObjectDataFromResponse(resp2);
+                        }
+                        if($scope.myIntervals['privateMessage']){
+                          $interval.cancel($scope.myIntervals['privateMessage']);
+                        }
+                        $scope.myIntervals['privateMessage'] = $interval(function() {
+                                        MessageService.getAllMessagesToUser(UserService.name, UserService.password,$scope.chat.other_user.uid,UserService.uid).then(function(resp3){
+                                          var data2 = $scope.getObjectDataFromResponse(resp3);
+                                          if(!(data2.Status && data2.Status=="error")){
+                                            $scope.chat.messages = $scope.getObjectDataFromResponse(data2);
+                                            var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
+                                            $scope.scrollMe("message-"+mnid);
+                                          }
+                                        });
+                                      }, 3000);
+                        $ionicModal.fromTemplateUrl('templates/private_chat.html', {
+                            scope: $scope,
+                            hardwareBackButtonClose: false,
+                            animation: 'slide-in-up',
+                            //focusFirstInput: true
+                          }).then(function(modal) {
+                              document.getElementById("spinner").style.display = "none";
+                              document.getElementById("user-options-menu").style.display="none";
+                              ModalService.checkNoModalIsOpen();
+                              ModalService.activeModal = modal;
+                              document.getElementById("foot_bar").style.display = "none";
+                              ModalService.activeModal.show();
+                              SemaphoreService.makeAvailableAgain("open-modal");
+                              var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
+                              $scope.scrollMe("message-"+mnid);
+                          });
+                      });
+                    });
+                  }
+                  //SemaphoreService.makeAvailableAgain("can_talk");
+                }
               });
-            }
           }else{
             document.getElementById("spinner").style.display = "none";
             SemaphoreService.makeAvailableAgain("open-modal");
@@ -647,7 +707,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
             document.getElementById("spinner-inside-modal").style.display = "none";
             var data = $scope.getObjectDataFromResponse(resp);
             if(!(data.Status && data.Status=="error")){
-              MessageService.canTalkToUsers['uid-'+$scope.invitation.other_user.uid] = null;
+              //MessageService.canTalkToUsers['uid-'+$scope.invitation.other_user.uid] = null;
             }else{
               error.style.display = "block";
               error.innerHTML = data.Message;
@@ -719,17 +779,33 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                 if(!(data2.Status && data2.Status=="error")){
                   $scope.invitation.invitations = data2;
                 }
+                MessageService.checkWhoCanTalk(UserService.name,UserService.password).then(function(resp){
+                  var data = $scope.getObjectDataFromResponse(resp);
+                  if(!(data.Status && data.Status=="error")){
+                    data.forEach(function(uid){
+                      MessageService.canTalkToUsers['uid-'+uid] = 1;
+                    });
+                  }
+                });
                 if($scope.myIntervals['drinkInvitation']){
                   $interval.cancel($scope.myIntervals['drinkInvitation']);
                 }
                 $scope.myIntervals['drinkInvitation'] = $interval(function() {
                   DrinkService.getAllInvitationsWithUser(UserService.name, UserService.password,$scope.invitation.other_user.uid,UserService.uid).then(function(resp3){
-                  var data3 = $scope.getObjectDataFromResponse(resp3);
-                  if(!(data3.Status && data3.Status=="error")){
-                    $scope.invitation.invitations = $scope.getObjectDataFromResponse(data3);
-                  }
+                    var data3 = $scope.getObjectDataFromResponse(resp3);
+                    if(!(data3.Status && data3.Status=="error")){
+                      $scope.invitation.invitations = $scope.getObjectDataFromResponse(data3);
+                    }
+                    MessageService.checkWhoCanTalk(UserService.name,UserService.password).then(function(resp){
+                      var data = $scope.getObjectDataFromResponse(resp);
+                      if(!(data.Status && data.Status=="error")){
+                        data.forEach(function(uid){
+                          MessageService.canTalkToUsers['uid-'+uid] = 1;
+                        });
+                      }
+                    });
                 });
-              }, 5000);
+              }, 3000);
                 $ionicModal.fromTemplateUrl('templates/drink_invitation.html', {
                   scope: $scope,
                   hardwareBackButtonClose: false,
@@ -1009,7 +1085,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           $cordovaGeolocation
             .getCurrentPosition(posOptions)
             .then(function (position) {
-              PinService.sendUserLocation(position.coords.latitude,position.coords.longitude,UserService.name,UserService.password).then(function(resp) {
+              PinService.sendUserLocation(position.coords.latitude,position.coords.longitude,UserService.name,UserService.password,UserService.uid).then(function(resp) {
                 if(ErrorService.http_response_is_successful_ajax(resp)){
                   LocationsService.save_last_user_position(position.coords.latitude,position.coords.longitude);
                   $scope.loadPinsLayer();
