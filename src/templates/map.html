@@ -20,11 +20,13 @@
   <div id="notification_{{notification.nid}}" class="notification_item" ng-repeat="notification in notifications track by $index">
     <p class="text">{{notification.titulo}} - {{notification.username}}</p>
     <p class="date">{{timeConverter(notification.created)}}</p>
-    <div class="invitation_button" ng-click="openNotification({{notification.nid}})">
-      Abrir
-    </div>
-    <div class="invitation_button" ng-click="closeNotification({{notification.nid}})">
-      Cerrar
+    <div class="actions">
+      <div class="action" ng-click="openNotification({{notification}})">
+        Abrir
+      </div>
+      <div class="action" ng-click="closeNotification({{notification}})">
+        Cerrar
+      </div>
     </div>
   </div>
 </div>

@@ -103,44 +103,50 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         $interval.cancel($scope.myIntervals['notifications']);
       }
       $scope.myIntervals['notifications']= $interval(function() {
+        $scope.notifications = new Array();
         if(UserService.uid){
           NotificationService.getUnrecivedNotifications(UserService.name, UserService.password).then(function(resp){
             var data = $scope.getObjectDataFromResponse(resp);
             if(!(data.Status && data.Status=="error")){
               $scope.notifications = $scope.getObjectDataFromResponse(data).Notifications;
+              /*var newNotificationArray = new Array();
+              $scope.notifications.forEach(function(notification_item,key){
+                if(!(notification_item.tipo in newNotificationArray)){
+                  newNotificationArray[notification_item.tipo] = new Array();
+                }
+                if(!(notification_item.uid in newNotificationArray[notification_item.tipo])){
+                  newNotificationArray[notification_item.tipo][notification_item.uid] = 1;
+                }else{
+                  newNotificationArray[notification_item.tipo][notification_item.uid] += 1;
+                }
+              });*/
             }
           });
         }
       }, 3000);
     };
 
-    $scope.openNotification = function(nid){
-      var newNotificationArray = new Array();
-      $scope.notifications.forEach(function(notification,key){
-        if(notification.nid==nid){
-          if(notification.tipo=="nuevo_mensaje"){
-            $scope.send_message_to(notification.uid);
-          }else if(notification.tipo=="invitacion_a_trago"){
-            $scope.openInvitationsModal(notification.uid);
-          }else if(notification.tipo=="respuesta_a_invitacion"){
-            $scope.openInvitationsModal(notification.uid);
-          }
-        }else{
-          newNotificationArray.push(notification);
-        }
-      });
-      $scope.notifications = newNotificationArray;
+    $scope.openNotification = function(notification){
+      $scope.dontShowNotificationAgain(notification.nid);
+      if(notification.tipo=="nuevo_mensaje"){
+        $scope.send_message_to(notification.uid);
+      }else if(notification.tipo=="invitacion_a_trago"){
+        $scope.openInvitationsModal(notification.uid);
+      }else if(notification.tipo=="respuesta_a_invitacion"){
+        $scope.openInvitationsModal(notification.uid);
+      }
     }
 
-    $scope.closeNotification = function(nid){
-      var newNotificationArray = new Array();
-      $scope.notifications.forEach(function(notification,key){
-        if(notification.nid==nid){
-        }else{
-          newNotificationArray.push(notification);
-        }
-      });
-      $scope.notifications = newNotificationArray;
+    $scope.dontShowNotificationAgain = function(nid){
+      if(UserService.uid){
+        NotificationService.dontShowNotificationAgain(UserService.name,UserService.password,nid).then(function(resp){
+          //AFTER SENDING NOT SHOW ORDER DO NOTHING
+        });
+      }
+    }
+
+    $scope.closeNotification = function(notification){
+      $scope.dontShowNotificationAgain(notification.nid);
     }
 
     $scope.openWebsite = function(url) {

@@ -1149,18 +1149,40 @@ margin-top: 10px;
   background-color: #ffffff;
   margin-bottom: 10px;
   position: relative;
-  height: 120px;
+  height: 50px;
   border-radius: 15px;
+}
+
+.notification_item .text{
+  font-size: 8pt;
+  margin: 0;
 }
 
 .notification_item .date{
   color: grey;
-  font-size: 10pt;
+  font-size: 8pt;
 }
 
 #notifications{
   position: absolute;
-  top: 5px;
-  left: 17%;
-  width: 80%;
+  bottom: 5px;
+  left: 0;
+  width: 70%;
+  height: 100px;
+  overflow: auto;
+  z-index: 99999;
+  padding: 5px;
+}
+
+.notification_item .action{
+  font-size: 10pt;
+  color: blue;
+  float: left;
+  margin-right: 20px;
+}
+
+.notification_item .actions {
+  float: right;
+  margin-top: -30px;
+
 }
