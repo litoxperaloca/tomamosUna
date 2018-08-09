@@ -17,7 +17,7 @@ pmb_im.app = angular.module('pmb_im', ['ionic','ionic.wizard','ion-autocomplete'
 })
 
 .constant('ApiDataEndpoint', {
-  url: 'http://tomamosuna.info'
+  url: 'https://backend.e-openbar.com'
 })
 
 
@@ -28,7 +28,7 @@ pmb_im.app = angular.module('pmb_im', ['ionic','ionic.wizard','ion-autocomplete'
     // for form inputs)
     if (window.cordova && window.cordova.plugins.Keyboard) {
       cordova.plugins.Keyboard.hideKeyboardAccessoryBar(false);
-      //cordova.plugins.Keyboard.disableScroll(false);
+      cordova.plugins.Keyboard.disableScroll(false);
     }
     //$cordovaKeyboard.hideAccessoryBar(false)
     //$cordovaKeyboard.disableScroll(false)

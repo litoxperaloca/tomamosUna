@@ -169,7 +169,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       $scope.map = {
         defaults: {
           tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
-          minZoom: 12,
+          minZoom: 1,
           maxZoom: 18,
           zoomControlPosition: 'topleft',
         },
@@ -1384,7 +1384,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           fields.push($scope.create_field_array_with_twoFields("'Contraseña' y 'Confirmar contraseña'","equalsTo",$scope.newuser.password, $scope.newuser.repassword));*/
           //if(ErrorService.check_fields(fields,"error_container")){
             if($scope.newuser.picture_url!=null && $scope.newuser.picture_url!="" && ValidationService.isMobileDevice()){
-              AuthService.create_user($scope.newuser).success(function(data, status, headers,config){
+              AuthService.create_user($scope.newuser).then(function(data){
                 document.getElementById("sent_label").innerHTML = "Enviado: 100%";
                 if(ErrorService.http_data_response_is_successful(data,"error_container")){
                   data = $scope.getObjectDataFromResponse(data);
@@ -1399,12 +1399,10 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                   SemaphoreService.makeAvailableAgain("submit-form");
                   document.getElementById("spinner-inside-modal").style.display = "none";
                 }
-              })
-              .error(function(data, status, headers,config){
-                ErrorService.show_error_message("error_container",status);
+              },function(err){
                 SemaphoreService.makeAvailableAgain("submit-form");
                 document.getElementById("spinner-inside-modal").style.display = "none";
-              })
+              });
             }else{
                 AuthService.create_user($scope.newuser).then(function(resp) {
                 if(ErrorService.http_response_is_successful(resp,"error_container")){

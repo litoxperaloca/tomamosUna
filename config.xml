@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <widget id="com.tomamosuna.app" version="1.0.0" xmlns="http://www.w3.org/ns/widgets" xmlns:cdv="http://cordova.apache.org/ns/1.0">
-  <name>TomamosUna</name>
+  <name>e-openbar</name>
   <description>
-        Tomamos una? es una aplicación para invitar tragos y conocer gente
+        e-openbar es una aplicación para invitar tragos y conocer gente
     </description>
-  <author email="devops@datauy.org" href="http://datauy.org/">
-      DATAUY
+  <author email="pablo.pignolo@gmail.com" href="http://datauy.org/">
+      LITO
     </author>
   <content src="index.html"/>
   <access origin="*"/>
@@ -19,6 +19,7 @@
   <preference name="UIWebViewBounce" value="false"/>
   <preference name="DisallowOverscroll" value="true"/>
   <preference name="BackupWebStorage" value="none"/>
+  <preference name="Fullscreen" value="true" />
   <preference name="SplashScreen" value="none"/>
   <preference name="AndroidPersistentFileLocation" value="Internal"/>
   <preference name="SplashScreenDelay" value="3000"/>

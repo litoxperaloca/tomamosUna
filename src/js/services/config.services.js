@@ -2,13 +2,13 @@ pmb_im.services.factory('ConfigService', ['$http', function($http) {
 
   var ConfigObj = {};
   //ConfigObj.baseURL = "https://pmbdev.development.datauy.org";
-  ConfigObj.baseURL = "http://tomamosuna.info";
+  ConfigObj.baseURL = "https://backend.e-openbar.com";
   if(ionic.Platform.isWebView()){
-    ConfigObj.baseURL = "http://tomamosuna.info";
+    ConfigObj.baseURL = "https://backend.e-openbar.com";
   } else {
     ConfigObj.baseURL = "/backend";
   }
-  ConfigObj.AppName = "¿Tomamos una?";
+  ConfigObj.AppName = "e-openbar";
 
   ConfigObj.baseCobrand = "/cobrands/pormibarrio";
 

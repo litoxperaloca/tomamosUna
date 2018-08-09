@@ -8,7 +8,7 @@
     },
     {
       "path": "/backend",
-      "proxyUrl": "http://tomamosuna.info"
+      "proxyUrl": "https://backend.e-openbar.com"
     }
   ],
   "gulpStartupTasks": [
