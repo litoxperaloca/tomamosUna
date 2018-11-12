@@ -1,6 +1,5 @@
 pmb_im.services.factory('MessageService', ['$http', 'leafletData','ConfigService', function($http, leafletData, ConfigService) {
 
-  var pinsURL = ConfigService.baseURL + "/sites/tomamos_una/files/json/online_users_geo.json";
   var apiURL = ConfigService.baseURL + "/api/"
 /**
    * Constructor, with class name
@@ -13,6 +12,11 @@ pmb_im.services.factory('MessageService', ['$http', 'leafletData','ConfigService
   Message.getAllMessagesToUser = function(username,password,uid,author_uid){
     var body = 'user='+username+'&password='+password+'&author_uid='+author_uid+'&uid='+uid+'&hash_id='+Math.random();
     return $http.post(apiURL + 'get_all_messages_to_user', body,{headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
+  }
+
+  Message.getAllMessages = function(username,password){
+    var body = 'user='+username+'&password='+password+'&hash_id='+Math.random();
+    return $http.post(apiURL + 'get_all_messages', body,{headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
   }
 
   Message.getUserInfo = function(uid){

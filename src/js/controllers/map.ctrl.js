@@ -12,6 +12,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
   'DrinkService',
   'AuthService',
   'UserService',
+  'BarService',
   'DBService',
   '$timeout',
   '$interval',
@@ -43,6 +44,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     DrinkService,
     AuthService,
     UserService,
+    BarService,
     DBService,
     $timeout,
     $interval,
@@ -70,6 +72,15 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     $scope.user_cached_image = "./img/icon-user-anonymous.png";
     $scope.one_value_popup = null;
     $scope.myIntervals = new Array();
+    $scope.selected_person = null;
+    $scope.login = {warning:null};
+    $scope.setBackTo="";
+    $scope.filter = new Array();
+    $scope.filter.filter_people_distance_range = 0;
+    $scope.filter.filter_people_online = false;
+    $scope.filter.filter_people_interesado_en = "Personas en general";
+    $scope.filter.filter_bar_distance_range = 0;
+    $scope.filter.filter_bar_open = false;
 
     $scope.$on("$ionicView.beforeEnter", function() {
       ModalService.checkNoModalIsOpen();
@@ -89,6 +100,28 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     });
 
     $scope.$on("$ionicView.afterEnter", function() {
+      document.getElementById("button_general").className = document.getElementById("button_general").className + " active";
+      if(UserService.uid==null){
+        var user = DBService.getUser();
+         user.then(function (doc) {
+           if(doc.name!=null && doc.name!="" && doc.name!="undefined"){
+           }else{
+             $scope.show_login_modal();
+           }
+         }).catch(function (err) {
+           $scope.show_login_modal();
+         });
+      }else{
+        if($scope.myIntervals['all_chats']){
+          $interval.cancel($scope.myIntervals['all_chats']);
+        }
+        $scope.myIntervals['all_chats'] = $interval(function() {
+          MessageService.getAllMessages(UserService.name,UserService.password).then(function(resp2){
+            var data2 = $scope.getObjectDataFromResponse(resp2);
+            $scope.all_messages = data2;
+          });
+        }, 3000);
+      }
       var map = leafletData.getMap();
       if(LocationsService.initial_lat!=""){
         MapService.centerMapOnCoords(LocationsService.initial_lat, LocationsService.initial_lng, 16);
@@ -103,23 +136,15 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         $interval.cancel($scope.myIntervals['notifications']);
       }
       $scope.myIntervals['notifications']= $interval(function() {
-        $scope.notifications = new Array();
+
         if(UserService.uid){
           NotificationService.getUnrecivedNotifications(UserService.name, UserService.password).then(function(resp){
             var data = $scope.getObjectDataFromResponse(resp);
             if(!(data.Status && data.Status=="error")){
-              $scope.notifications = $scope.getObjectDataFromResponse(data).Notifications;
-              /*var newNotificationArray = new Array();
-              $scope.notifications.forEach(function(notification_item,key){
-                if(!(notification_item.tipo in newNotificationArray)){
-                  newNotificationArray[notification_item.tipo] = new Array();
-                }
-                if(!(notification_item.uid in newNotificationArray[notification_item.tipo])){
-                  newNotificationArray[notification_item.tipo][notification_item.uid] = 1;
-                }else{
-                  newNotificationArray[notification_item.tipo][notification_item.uid] += 1;
-                }
-              });*/
+              if(!$scope.isEqual($scope.notifications,$scope.getObjectDataFromResponse(data).Notifications)){
+                $scope.notifications = new Array();
+                $scope.notifications = $scope.getObjectDataFromResponse(data).Notifications;
+              }
             }
           });
         }
@@ -168,10 +193,19 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     $scope.create_online_map = function(){
       $scope.map = {
         defaults: {
-          tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
+          //tileLayer: 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',
           minZoom: 1,
           maxZoom: 18,
           zoomControlPosition: 'topleft',
+        },
+	layers: {
+            baselayers: {
+                googleRoadmap: {
+                    name: 'Google Streets',
+                    layerType: 'ROADMAP',
+                    type: 'google'
+                }
+            }
         },
         markers: {},
         events: {
@@ -190,6 +224,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           zoom: 16
         };
       leafletData.getMap().then(function(map) {
+	//var googleLayer = new L.Google('ROADMAP');
+      	//map.addLayer(googleLayer);
         map.on('moveend', $scope.hideOffScreenPins);
       });
     };
@@ -410,8 +446,10 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
             if (!shouldBeVisible) {
                 map.removeLayer(layer);
             } else if (shouldBeVisible) {
-                map.addLayer(layer);
-                $scope.usersVisible.push(layer.feature);
+                if($scope.pinIsNotFiltered(layer)){
+                  map.addLayer(layer);
+                  $scope.usersVisible.push(layer.feature);
+                }
             }
           })
       });
@@ -433,8 +471,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     $scope.loadPinsLayer = function(){
         document.getElementById("spinner").style.display = "block";
         leafletData.getMap().then(function(map) {
-          PinService.getAll().then(function (response) {
-            if(PinService.lastPinsResponse==null || (PinService.lastPinsResponse && PinService.lastPinsResponse!=response)){
+          PinService.getAllByUser(UserService.name,UserService.password).then(function (response) {
+            if(PinService.lastPinsResponse==null || (PinService.lastPinsResponse && !$scope.isEqual(PinService.lastPinsResponse,response))){
               if($scope.online_user_geo_array){
                 $scope.usersVisible = [];
                 $scope.online_user_geo_array.forEach(function(layer,key){
@@ -447,60 +485,117 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
               $scope.online_users_geo = response.data.features;
               pinsArray.forEach(function(feature){
                 if (feature.properties) {
-                    var lon = feature.geometry.coordinates[0];
-                    var lat = feature.geometry.coordinates[1];
-                    if(lon&&lat){
-                      var onlineStatus = feature.properties.Online_status;
-                      var icon = feature.properties.Icon;
-                      if(icon=="anon"){
-                        icon = "./img/icon-user-anonymous.png";
-                      }
-                      var icon_shadow = './img/generic_pin_red.png';
-                      if(onlineStatus=="Online"){
-                        icon_shadow = './img/generic_pin_green.png';
-                      }
-                      var markerIcon = L.icon({
-                        shadowUrl: icon_shadow,
-                        shadowSize:   [100, 138],
-                        shadowAnchor: [44, 138],
-                        iconUrl: icon,
-                        iconSize: [46, 46],
-                        iconAnchor: [24, 120],
-                        popupAnchor: [0, -138]
-                      });
-                      var layer = L.marker([lat, lon], {icon: markerIcon});
-                      layer.feature = feature;
-                      $scope.online_user_geo_array[layer.feature.properties.Uid] = layer;
-                      if (feature.properties) {
-                        var uid = feature.properties.Uid;
-                        var name = feature.properties.Name;
-                        var interested = feature.properties.InterestedIn;
-                        var status = feature.properties.Status;
-                        var gender = feature.properties.Gender;
-                        //var onlineStatus = feature.properties.Online_status;
-                        //feature.properties.Cantalk = $scope.canTalkToUser(feature.properties.Uid,0);
-                        //MessageService.canTalkToUsers[uid]==0;
-                        if(UserService.uid && UserService.uid==uid){
-                          name = "Tú: "+name;
+                  if(feature.properties.Type=="Person"){
+                      var lon = feature.geometry.coordinates[0];
+                      var lat = feature.geometry.coordinates[1];
+                      if(lon&&lat){
+                        var onlineStatus = feature.properties.Online_status;
+                        var icon = feature.properties.Icon;
+                        if(icon=="anon"){
+                          icon = "./img/icon-user-anonymous.png";
                         }
-                        var lastUpdate = $scope.timeConverter(feature.properties.LocationTimeStamp);
-                        html = '<a class="name_inside_marker_popup"><p>' + name + '</p>';
-                        html = html +'<p class="gender_inside_marker_popup">'+gender+'</p>';
-                        html = html +'<p><img class="img_inside_marker_popup" src="'+icon+'"/></p>';
-                        html = html +'<p class="status_inside_marker_popup">"'+status+'"</p>';
-                        html = html +'<p class="interested_inside_marker_popup">Interesad@ en '+interested+'</p>';
-                        html = html +'<p class="lastupdate_inside_marker_popup">'+onlineStatus+'</p>';
-                        html = html +'<p class="lastupdate_inside_marker_popup">'+lastUpdate+'</p>';
-                        if(!UserService.uid || UserService.uid!=uid){
-                          html = html +'<p class="message_icon_inside_marker_popup"><img ng-click="send_message_to('+uid+');" src="./img/message_icon.png" />';
-                          html = html +'<img ng-click="openInvitationsModal('+uid+');" src="./img/drink_icon.png" /></p>';
+                        var markerIcon;
+                        if(UserService.uid && UserService.uid==feature.properties.Uid){
+                          markerIcon = L.icon({
+                            className: 'userIcon',
+                            iconUrl: icon,
+                            iconSize: [72, 72],
+                            iconAnchor: [36, 72],
+                            popupAnchor: [0, -72]
+                          });
+                        }else{
+                          if(onlineStatus=="Online"){
+                            markerIcon = L.divIcon({
+                              //className: 'personIcon personOnline',
+                              //iconUrl: icon,
+                              iconSize: [52, 60],
+                              iconAnchor: [26, 60],
+                              popupAnchor: [0, -60],
+                              html: '<div><div class="userMarker" /></div><img src="'+icon+'" class="leaflet-marker-icon personOnline leaflet-zoom-animated leaflet-clickable" tabindex="0"><div class="onlineCircle" /></div>'
+                            });
+                          }else{
+                            markerIcon = L.divIcon({
+                              //className: 'personIcon personOnline',
+                              //iconUrl: icon,
+                              iconSize: [52, 60],
+                              iconAnchor: [26, 60],
+                              popupAnchor: [0, -60],
+                              html: '<div><div class="userMarker" /></div><img src="'+icon+'" class="leaflet-marker-icon personOnline leaflet-zoom-animated leaflet-clickable" tabindex="0">'
+                            });
+                          }
+
                         }
-                        html = html +'</a>';
-                        var compiled = $compile(html)($scope);
-                        layer.bindPopup(compiled[0]);
+                        var layer = L.marker([lat, lon], {icon: markerIcon});
+                        layer.feature = feature;
+                        $scope.online_user_geo_array[layer.feature.properties.Uid] = layer;
+                        layer.on('click', function(e) {
+                            var uid = e.target.feature.properties.Uid;
+                            if(UserService.uid && UserService.uid==uid){
+                              //SI HACE CLIC EN SI MISMO NO HAGO NADA
+                            }else{
+                              $scope.selected_person = e.target.feature.properties;
+                              var icon = e.target.feature.properties.Icon;
+                              if(icon=="anon"){
+                                $scope.selected_person.Icon = "./img/icon-user-anonymous.png";
+                              }
+                              document.getElementById("spinner").style.display = "block";
+                              //$scope.goToCenter($scope.selected_container.lon,$scope.selected_container.lat);
+                              $ionicModal.fromTemplateUrl('templates/user_map_popup.html', {
+                                scope: $scope,
+                                hardwareBackButtonClose: true,
+                                animation: 'none',
+                                //focusFirstInput: true
+                              }).then(function(modal) {
+                                  document.getElementById("spinner").style.display = "none";
+                                  ModalService.checkNoModalIsOpen();
+                                  ModalService.activeModal = modal;
+                                  ModalService.activeModal.show();
+                                  SemaphoreService.makeAvailableAgain("open-modal");
+                              });
+                            }
+                        });
                       }
                     }
+                    if(feature.properties.Type=="Bar"){
+                      var lon = feature.geometry.coordinates[0];
+                      var lat = feature.geometry.coordinates[1];
+                      if(lon&&lat){
+                        var icon = feature.properties.Icon;
+                        var markerIcon;
+                        markerIcon = L.icon({
+                          className: 'barIcon',
+                          iconUrl: icon,
+                          iconSize: [33, 45],
+                          iconAnchor: [16, 45],
+                          popupAnchor: [0, -45]
+                        });
+                        var layer = L.marker([lat, lon], {icon: markerIcon});
+                        layer.feature = feature;
+                        $scope.online_user_geo_array[layer.feature.properties.Nid] = layer;
+                        layer.on('click', function(e) {
+                            var nid = e.target.feature.properties.Nid;
+                            $scope.selected_bar = e.target.feature.properties;
+                            var icon = e.target.feature.properties.Photo;
+                            $scope.selected_bar.Icon = icon;
+                            document.getElementById("spinner").style.display = "block";
+                            //$scope.goToCenter($scope.selected_container.lon,$scope.selected_container.lat);
+                            $ionicModal.fromTemplateUrl('templates/bar_map_popup.html', {
+                              scope: $scope,
+                              hardwareBackButtonClose: true,
+                              animation: 'none',
+                              //focusFirstInput: true
+                            }).then(function(modal) {
+                                document.getElementById("spinner").style.display = "none";
+                                ModalService.checkNoModalIsOpen();
+                                ModalService.activeModal = modal;
+                                ModalService.activeModal.show();
+                                SemaphoreService.makeAvailableAgain("open-modal");
+                            });
+
+                      });
+                    }
                   }
+                }
               });
               document.getElementById("spinner").style.display = "none";
               $scope.hideOffScreenPins();
@@ -509,6 +604,11 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           });
 
         });
+    }
+
+    $scope.close_active_modal = function(){
+      ModalService.checkNoModalIsOpen();
+      $scope.setActiveMenuButton('button_general');
     }
 
     $scope.checkTalkStatus = function(){
@@ -546,7 +646,135 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       }
     }
 
+    $scope.setActiveMenuButton = function(button_id){
+      var x = document.getElementsByClassName("menu_button");
+      var i;
+      for (i = 0; i < x.length; i++) {
+          x[i].classList.remove('active');
+      }
+      document.getElementById(button_id).classList.add('active');
+    }
+
+    $scope.open_notifications_modal = function(){
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          if(UserService.uid){
+              NotificationService.getAllNotifications(UserService.name,UserService.password).then(function(resp){
+                var data = $scope.getObjectDataFromResponse(resp);
+                //console.log(data);
+                $scope.all_notifications = data;
+                $ionicModal.fromTemplateUrl('templates/notifications.html', {
+                  scope: $scope,
+                  hardwareBackButtonClose: true,
+                  animation: 'none',
+                  //backdropClickToClose: true
+                  //focusFirstInput: true
+                }).then(function(modal) {
+                    document.getElementById("spinner").style.display = "none";
+                    ModalService.checkNoModalIsOpen();
+                    ModalService.activeModal = modal;
+                    document.getElementById("foot_bar").style.display = "block";
+                    $scope.setActiveMenuButton('button_notifications');
+                    ModalService.activeModal.show();
+                    SemaphoreService.makeAvailableAgain("open-modal");
+                });
+              });
+          }else{
+            SemaphoreService.makeAvailableAgain("open-modal");
+          }
+       }
+    }
+
+    $scope.open_chat_modal = function(){
+        $scope.clear_all_intervals();
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          if(UserService.uid){
+              MessageService.getAllMessages(UserService.name,UserService.password).then(function(resp){
+                var data = $scope.getObjectDataFromResponse(resp);
+                $scope.all_messages = data;
+                $ionicModal.fromTemplateUrl('templates/chats.html', {
+                  scope: $scope,
+                  hardwareBackButtonClose: true,
+                  animation: 'none',
+                  //backdropClickToClose: true
+                  //focusFirstInput: true
+                }).then(function(modal) {
+                    document.getElementById("spinner").style.display = "none";
+                    ModalService.checkNoModalIsOpen();
+                    ModalService.activeModal = modal;
+                    document.getElementById("foot_bar").style.display = "block";
+                    $scope.setActiveMenuButton('button_chat');
+                    ModalService.activeModal.show();
+                    SemaphoreService.makeAvailableAgain("open-modal");
+                });
+              });
+          }else{
+            SemaphoreService.makeAvailableAgain("open-modal");
+          }
+       }
+   }
+
+   $scope.open_user_list = function(barActiveTab){
+        //console.log(barActiveTab);
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          if(UserService.uid){
+              UserService.getUserList(UserService.name,UserService.password).then(function(resp){
+                var data = $scope.getObjectDataFromResponse(resp);
+                $scope.all_users = data;
+                $scope.filterUsers();
+                BarService.getBarList(UserService.name,UserService.password).then(function(resp2){
+                  var data2 = $scope.getObjectDataFromResponse(resp2);
+                  $scope.all_bars = data2;
+                  $scope.filterBars();
+                  if(barActiveTab==false){
+                    $ionicModal.fromTemplateUrl('templates/user_list.html', {
+                      scope: $scope,
+                      hardwareBackButtonClose: true,
+                      animation: 'none',
+                      //backdropClickToClose: true
+                      //focusFirstInput: true
+                    }).then(function(modal) {
+                        document.getElementById("spinner").style.display = "none";
+                        ModalService.checkNoModalIsOpen();
+                        ModalService.activeModal = modal;
+                        document.getElementById("foot_bar").style.display = "block";
+                        $scope.setActiveMenuButton('button_general');
+                        ModalService.activeModal.show();
+                        SemaphoreService.makeAvailableAgain("open-modal");
+
+                    });
+                  }else{
+                    $ionicModal.fromTemplateUrl('templates/user_list_bar.html', {
+                      scope: $scope,
+                      hardwareBackButtonClose: true,
+                      animation: 'none',
+                      //backdropClickToClose: true
+                      //focusFirstInput: true
+                    }).then(function(modal) {
+                        document.getElementById("spinner").style.display = "none";
+                        ModalService.checkNoModalIsOpen();
+                        ModalService.activeModal = modal;
+                        document.getElementById("foot_bar").style.display = "block";
+                        $scope.setActiveMenuButton('button_general');
+                        ModalService.activeModal.show();
+                        SemaphoreService.makeAvailableAgain("open-modal");
+
+                    });
+                  }
+
+                });
+              });
+
+          }else{
+            SemaphoreService.makeAvailableAgain("open-modal");
+          }
+       }
+   }
+
     $scope.send_message_to = function(uid){
+        $scope.clear_all_intervals();
         if(SemaphoreService.takeIfAvailable("open-modal")){
           document.getElementById("spinner").style.display = "block";
           if(UserService.uid){
@@ -560,18 +788,13 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                   if(!$scope.canTalkToUser(uid)){
                     SemaphoreService.makeAvailableAgain("open-modal");
                     document.getElementById("spinner").style.display = "none";
-                    var alertPopup = $ionicPopup.alert({
-                     title: "Invita algo de tomar",
-                     template: "Debe tener al menos una invitación a un trago aceptada entre usted y esta persona para poder hablar."
-                    });
-                    alertPopup.then(function(res) {
-                      //return false;
-                    });
+                    $scope.selected_person.warning = "Debe tener al menos una invitación a un trago aceptada entre usted y esta persona para poder hablar.";
                   }else{
                     $scope.chat = new Array();
+                    $scope.chat.my_uid = UserService.uid;
+                    $scope.chat.my_picture_url = UserService.picture_url;
                     $scope.chat.other_user = new Array();
                     $scope.chat.other_user.uid = uid;
-                    $scope.chat.messages = new Array();
                     $scope.chat.new_text_message = "";
                     MessageService.getUserInfo(uid).then(function(resp){
                       if($scope.getObjectDataFromResponse(resp).Photo){
@@ -580,11 +803,15 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                         $scope.chat.other_user.picture_url = "./img/icon-user-anonymous.png";
                       }
                       $scope.chat.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
+                      $scope.chat.other_user.online_status = $scope.getObjectDataFromResponse(resp).Online_status;
                       var author_uid = UserService.uid;
                       MessageService.getAllMessagesToUser(UserService.name, UserService.password,uid,author_uid).then(function(resp2){
                         var data = $scope.getObjectDataFromResponse(resp2);
                         if(!(data.Status && data.Status=="error")){
-                          $scope.chat.messages = $scope.getObjectDataFromResponse(resp2);
+                          if(!$scope.isEqual($scope.chat.messages,$scope.getObjectDataFromResponse(resp2))){
+                            $scope.chat.messages = new Array();
+                            $scope.chat.messages = $scope.getObjectDataFromResponse(resp2);
+                          }
                         }
                         if($scope.myIntervals['privateMessage']){
                           $interval.cancel($scope.myIntervals['privateMessage']);
@@ -593,16 +820,19 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                                         MessageService.getAllMessagesToUser(UserService.name, UserService.password,$scope.chat.other_user.uid,UserService.uid).then(function(resp3){
                                           var data2 = $scope.getObjectDataFromResponse(resp3);
                                           if(!(data2.Status && data2.Status=="error")){
-                                            $scope.chat.messages = $scope.getObjectDataFromResponse(data2);
-                                            var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
-                                            $scope.scrollMe("message-"+mnid);
+                                            if(!$scope.isEqual($scope.chat.messages,$scope.getObjectDataFromResponse(data2))){
+                                              $scope.chat.messages = new Array();
+                                              $scope.chat.messages = $scope.getObjectDataFromResponse(data2);
+                                              var mnid = $scope.chat.messages[$scope.chat.messages.length-1].nid;
+                                              $scope.scrollMe("message-"+mnid);
+                                            }
                                           }
                                         });
                                       }, 3000);
                         $ionicModal.fromTemplateUrl('templates/private_chat.html', {
                             scope: $scope,
-                            hardwareBackButtonClose: false,
-                            animation: 'slide-in-up',
+                            hardwareBackButtonClose: true,
+                            animation: 'none',
                             //focusFirstInput: true
                           }).then(function(modal) {
                               document.getElementById("spinner").style.display = "none";
@@ -624,13 +854,14 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           }else{
             document.getElementById("spinner").style.display = "none";
             SemaphoreService.makeAvailableAgain("open-modal");
-            var alertPopup = $ionicPopup.alert({
+            /*var alertPopup = $ionicPopup.alert({
                  title: "Inicie sesión o cree una nueva cuenta",
                  template: "Debe estar logueado para poder enviar y recibir mensajes."
                 });
                 alertPopup.then(function(res) {
                   //return false;
-                });
+                });*/
+            $scope.selected_person.warning = "Debe estar logueado para poder enviar y recibir mensajes.";
           }
         }else{
           //SEMAFORO OCUPADO
@@ -695,7 +926,6 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       }
     }
 
-
     $scope.send_invitation_response = function(response,nid){
       var error = document.getElementById("error_container");
       error.style.display = "none";
@@ -723,6 +953,16 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       }
     }
 
+    $scope.select_drink_to_invite = function(drinkNid){
+      $scope.invitation.selected_drink = drinkNid;
+      var x = document.getElementsByClassName("invitation drink selected");
+      var i;
+      for (i = 0; i < x.length; i++) {
+          x[i].className = "invitation drink";
+      }
+      document.getElementById("drink_nid_"+drinkNid).className = "invitation drink selected";
+    }
+
     $scope.send_invitation = function(){
       var error = document.getElementById("error_container");
       if($scope.invitation.selected_drink == null){
@@ -732,8 +972,11 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         var cost = $scope.getDrinkCostByNid($scope.invitation.selected_drink);
         var credits = $scope.invitation.user_credits;
         if(parseFloat(cost)>parseFloat(credits)){
-          error.style.display = "block";
-          error.innerHTML = "Créditos insuficientes. Para poder invitar esta bebida debe comprar más créditos";
+          $scope.invitation.warning = "No tienes suficientes créditos.";
+          $scope.invitation.warning_sub = "Carga más créditos para seguir invitando.";
+
+          //error.style.display = "block";
+          //error.innerHTML = "Créditos insuficientes. Para poder invitar esta bebida debe comprar más créditos";
         }else{
           if(SemaphoreService.takeIfAvailable("submit-form")){
             document.getElementById("spinner-inside-modal").style.display = "block";
@@ -745,6 +988,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
                 $scope.invitation.user_credits = data.NewCredits;
                 $scope.invitation.selected_drink = null;
                 MessageService.canTalkToUsers['uid-'+$scope.invitation.other_user.uid] = null;
+                $scope.openInvitationsModal($scope.invitation.other_user.uid);
               }else{
                 error.style.display = "block";
                 error.innerHTML = data.Message;
@@ -755,7 +999,94 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       }
     }
 
+    $scope.openSingleInvitationModalFromChat = function(uid){
+      if($scope.myIntervals['privateMessage']){
+        $interval.cancel($scope.myIntervals['privateMessage']);
+      }
+      $scope.invitation = new Array();
+      $scope.invitation.response = null;
+      $scope.invitation.other_user = new Array();
+      $scope.invitation.other_user = new Array();
+      $scope.invitation.other_user.uid = uid;
+      $scope.invitation.invitations = new Array();
+      $scope.invitation.available_drinks = new Array();
+      $scope.invitation.selected_drink = null;
+      MessageService.getUserInfo(uid).then(function(data_resp){
+        if($scope.getObjectDataFromResponse(data_resp).Photo){
+          $scope.invitation.other_user.picture_url = $scope.getObjectDataFromResponse(data_resp).Photo;
+        }else{
+          $scope.invitation.other_user.picture_url = "./img/icon-user-anonymous.png";
+        }
+        $scope.invitation.my_uid = UserService.uid;
+        $scope.invitation.my_picture_url = UserService.picture_url;
+        $scope.invitation.other_user.username = $scope.getObjectDataFromResponse(data_resp).Name;
+        $scope.invitation.other_user.online_status = $scope.getObjectDataFromResponse(data_resp).Online_status;
+        DrinkService.getAllDrinksAvailable(UserService.name, UserService.password).then(function(resp){
+          var data = $scope.getObjectDataFromResponse(resp);
+          if(!(data.Status && data.Status=="error")){
+            $scope.invitation.available_drinks = data.Drinks;
+            $scope.invitation.user_credits = data.UserCredits;
+          }
+        });
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          if(UserService.uid){
+            $ionicModal.fromTemplateUrl('templates/drink_invitation_new_from_chat.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                document.getElementById("user-options-menu").style.display="none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                document.getElementById("foot_bar").style.display = "none";
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+            });
+          }else{
+            document.getElementById("spinner").style.display = "none";
+            SemaphoreService.makeAvailableAgain("open-modal");
+            $scope.selected_person.warning = "Debe estar logueado para poder enviar y recibir invitaciones.";
+          }
+        }else{
+          //SEMAFORO OCUPADO
+        }
+      });
+
+    }
+
+    $scope.openSingleInvitationModal = function(uid){
+      if(SemaphoreService.takeIfAvailable("open-modal")){
+        document.getElementById("spinner").style.display = "block";
+        if(UserService.uid){
+          $ionicModal.fromTemplateUrl('templates/drink_invitation_new.html', {
+            scope: $scope,
+            hardwareBackButtonClose: true,
+            animation: 'none',
+            //focusFirstInput: true
+          }).then(function(modal) {
+              document.getElementById("spinner").style.display = "none";
+              document.getElementById("user-options-menu").style.display="none";
+              ModalService.checkNoModalIsOpen();
+              ModalService.activeModal = modal;
+              document.getElementById("foot_bar").style.display = "none";
+              ModalService.activeModal.show();
+              SemaphoreService.makeAvailableAgain("open-modal");
+          });
+        }else{
+          document.getElementById("spinner").style.display = "none";
+          SemaphoreService.makeAvailableAgain("open-modal");
+          $scope.selected_person.warning = "Debe estar logueado para poder enviar y recibir invitaciones.";
+        }
+      }else{
+        //SEMAFORO OCUPADO
+      }
+    }
+
     $scope.openInvitationsModal = function(uid){
+      $scope.clear_all_intervals();
       if(SemaphoreService.takeIfAvailable("open-modal")){
         document.getElementById("spinner").style.display = "block";
         if(UserService.uid){
@@ -773,7 +1104,10 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           }else{
             $scope.invitation.other_user.picture_url = "./img/icon-user-anonymous.png";
           }
+          $scope.invitation.my_uid = UserService.uid;
+          $scope.invitation.my_picture_url = UserService.picture_url;
           $scope.invitation.other_user.username = $scope.getObjectDataFromResponse(data_resp).Name;
+          $scope.invitation.other_user.online_status = $scope.getObjectDataFromResponse(data_resp).Online_status;
             DrinkService.getAllDrinksAvailable(UserService.name, UserService.password).then(function(resp){
               var data = $scope.getObjectDataFromResponse(resp);
               if(!(data.Status && data.Status=="error")){
@@ -814,8 +1148,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
               }, 3000);
                 $ionicModal.fromTemplateUrl('templates/drink_invitation.html', {
                   scope: $scope,
-                  hardwareBackButtonClose: false,
-                  animation: 'slide-in-up',
+                  hardwareBackButtonClose: true,
+                  animation: 'none',
                   //focusFirstInput: true
                 }).then(function(modal) {
                     document.getElementById("spinner").style.display = "none";
@@ -832,13 +1166,14 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         }else{
           document.getElementById("spinner").style.display = "none";
           SemaphoreService.makeAvailableAgain("open-modal");
-          var alertPopup = $ionicPopup.alert({
+          /*var alertPopup = $ionicPopup.alert({
                title: "Inicie sesión o cree una nueva cuenta",
                template: "Debe estar logueado para poder enviar y recibir invitaciones."
               });
               alertPopup.then(function(res) {
                 //return false;
-              });
+              });*/
+          $scope.selected_person.warning = "Debe estar logueado para poder enviar y recibir invitaciones.";
         }
       }else{
         //SEMAFORO OCUPADO
@@ -855,6 +1190,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       //Cargar el modal con la info del usuario logueado y con el submit a update_user
       document.getElementById("foot_bar").style.display = "block";
       ModalService.checkNoModalIsOpen();
+      $scope.setActiveMenuButton('button_general');
     }
 
     $scope.close_invitation_modal = function(){
@@ -867,6 +1203,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       //Cargar el modal con la info del usuario logueado y con el submit a update_user
       document.getElementById("foot_bar").style.display = "block";
       ModalService.checkNoModalIsOpen();
+      $scope.setActiveMenuButton('button_general');
     }
 
     $scope.send_message_ok = function(){
@@ -914,7 +1251,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
       var months = ['Enero','Febrero','Marzo','Abril','Mayo','Junio','Julio','Agosto','Setiembre','Octubre','Noviembre','Diciembre'];
       var year = a.getFullYear();
       //var month = months[a.getMonth()];
-      var month = a.getMonth();
+      var month = a.getMonth() + 1;
       if(month<10){
         month = "0"+month;
       }
@@ -1023,9 +1360,9 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           var fields = new Array();
           fields.push($scope.create_field_array("Usuario","notNull",user));
           fields.push($scope.create_field_array("Contraseña","notNull",password));
-          if(ErrorService.check_fields(fields,"error_container")){
+          if(ErrorService.check_fields(fields,$scope.login)){
             AuthService.log_in(user,password).then(function(resp) {
-              if(ErrorService.http_response_is_successful(resp,"error_container")){
+              if(ErrorService.http_response_is_successful(resp,$scope.login)){
                 photo = $scope.fix_fb_image_link($scope.getObjectDataFromResponse(resp).Photo);
                 if(photo=="anon"){
                   photo="url(./img/icon-user-anonymous.png)";
@@ -1125,6 +1462,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     }
 
     $scope.show_edit_profile_modal = function(){
+      $scope.clear_all_intervals();
       //Cargar el modal con la info del usuario logueado y con el submit a edit_profile_ok
       if(SemaphoreService.takeIfAvailable("open-modal")){
         document.getElementById("spinner").style.display = "block";
@@ -1147,8 +1485,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           if(ValidationService.isMobileDevice()){
             $ionicModal.fromTemplateUrl('templates/edit_profile_with_photo.html', {
                 scope: $scope,
-                hardwareBackButtonClose: false,
-                animation: 'slide-in-up',
+                hardwareBackButtonClose: true,
+                animation: 'none',
                 //focusFirstInput: true
               }).then(function(modal) {
                   document.getElementById("spinner").style.display = "none";
@@ -1161,8 +1499,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           }else{
             $ionicModal.fromTemplateUrl('templates/edit_profile_with_photo_desktop.html', {
               scope: $scope,
-              hardwareBackButtonClose: false,
-              animation: 'slide-in-up',
+              hardwareBackButtonClose: true,
+              animation: 'none',
               //focusFirstInput: true
             }).then(function(modal) {
                 document.getElementById("spinner").style.display = "none";
@@ -1290,6 +1628,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
 
 
     $scope.show_login_modal = function(){
+      $scope.clear_all_intervals();
       //Cargar el modal con el form de login y ahi llama al sign_in
       if(SemaphoreService.takeIfAvailable("open-modal")){
         $scope.nonauth = new Array();
@@ -1299,7 +1638,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         $ionicModal.fromTemplateUrl('templates/log_in.html', {
             scope: $scope,
             hardwareBackButtonClose: false,
-            animation: 'slide-in-up',
+            animation: 'none',
             //focusFirstInput: true
           }).then(function(modal) {
               $scope.hide_special_divs();
@@ -1318,11 +1657,14 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     $scope.close_login_modal = function(){
       document.getElementById("foot_bar").style.display = "block";
       ModalService.checkNoModalIsOpen();
+      $scope.setActiveMenuButton('button_general');
+
     }
 
 
 
     $scope.show_sign_up_modal = function(){
+      $scope.clear_all_intervals();
       //cargar el modal con el form de sign_up y de ahi llamar al sign_up
       if(SemaphoreService.takeIfAvailable("open-modal")){
         $scope.newuser = new Array();
@@ -1337,7 +1679,7 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
           $ionicModal.fromTemplateUrl('templates/sign_up.html', {
               scope: $scope,
               hardwareBackButtonClose: false,
-              animation: 'slide-in-up',
+              animation: 'none',
               //focusFirstInput: true
             }).then(function(modal) {
                 $scope.hide_special_divs();
@@ -1349,8 +1691,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
         }else{
           $ionicModal.fromTemplateUrl('templates/sign_up_desktop.html', {
               scope: $scope,
-              hardwareBackButtonClose: false,
-              animation: 'slide-in-up',
+              hardwareBackButtonClose: true,
+              animation: 'none',
               //focusFirstInput: true
             }).then(function(modal) {
                 $scope.hide_special_divs();
@@ -1367,6 +1709,8 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     $scope.close_sign_up_modal = function(){
       document.getElementById("foot_bar").style.display = "block";
       ModalService.checkNoModalIsOpen();
+      $scope.setActiveMenuButton('button_general');
+
     }
 
     $scope.sign_up = function(){
@@ -1518,38 +1862,400 @@ pmb_im.controllers.controller('MapController', ['$scope', '_',
     }
 
     $scope.find_me = function(){
-        $scope.set_active_option("button-find-me");
-        $scope.hide_special_divs();
-        var posOptions = {timeout: 10000, enableHighAccuracy: true};
-        $cordovaGeolocation
-          .getCurrentPosition(posOptions)
-          .then(function (position) {
-                $scope.map.center.lat  = position.coords.latitude;
-                $scope.map.center.lng = position.coords.longitude;
-                LocationsService.save_new_report_position(position.coords.latitude,position.coords.longitude);
-                if(ConnectivityService.isOnline()){
-                  $scope.map.center.zoom = 18;
-                }else{
-                  $scope.map.center.zoom = 16;
-                }
-                $scope.map.markers.now = {
-                  lat:position.coords.latitude,
-                  lng:position.coords.longitude,
-                  message: "<p align='center'>Te encuentras aquí <br/> <a ng-click='new_report(1);'>Iniciar reporte en tu posición actual</a></p>",
-                  focus: true,
-                  draggable: false,
-                  getMessageScope: function() { return $scope; }
-                };
-                //$scope.map.markers.now.openPopup();
-              }, function(err) {
-                // error
-                //console.log("Location error!");
-                //console.log(err);
-                //ErrorService.show_error_message_popup("No hemos podido geolocalizarlo. ¿Tal vez olvidó habilitar los servicios de localización en su dispositivo?")
-                $scope.openCouncilSelector();
-              });
+      $scope.set_active_option("button-find-me");
+      $scope.hide_special_divs();
+      var posOptions = {timeout: 10000, enableHighAccuracy: true};
+      $cordovaGeolocation
+        .getCurrentPosition(posOptions)
+        .then(function (position) {
+              $scope.map.center.lat  = position.coords.latitude;
+              $scope.map.center.lng = position.coords.longitude;
+              LocationsService.save_new_report_position(position.coords.latitude,position.coords.longitude);
+              if(ConnectivityService.isOnline()){
+                $scope.map.center.zoom = 18;
+              }else{
+                $scope.map.center.zoom = 16;
+              }
+              $scope.map.markers.now = {
+                lat:position.coords.latitude,
+                lng:position.coords.longitude,
+                message: "<p align='center'>Te encuentras aquí <br/> <a ng-click='new_report(1);'>Iniciar reporte en tu posición actual</a></p>",
+                focus: true,
+                draggable: false,
+                getMessageScope: function() { return $scope; }
+              };
+              //$scope.map.markers.now.openPopup();
+            }, function(err) {
+              // error
+              //console.log("Location error!");
+              //console.log(err);
+              //ErrorService.show_error_message_popup("No hemos podido geolocalizarlo. ¿Tal vez olvidó habilitar los servicios de localización en su dispositivo?")
+              $scope.openCouncilSelector();
+            });
 
-          };
+        };
+
+      $scope.click_on_perfil_button = function(){
+        $scope.clear_all_intervals();
+        if(UserService.uid!=null){
+          $scope.show_edit_profile_modal();
+        }else{
+          $scope.show_login_modal();
+        }
+        $scope.setActiveMenuButton('button_general');
+      };
+
+
+      $scope.isEqual = function(obj1, obj2){
+        if(!obj1 || !obj2){
+          return false;
+        }
+        if(Object.keys(obj1).length==Object.keys(obj2).length){
+            for(key in obj1) {
+                if(key !="params"){
+                if(obj1[key] == obj2[key]) {
+                    continue;
+                }
+                else {
+                  //console.log("key:" + key);
+                    return false
+                    break;
+                }
+              }
+            }
+        } else {
+            return false;
+        }
+        return true;
+      };
+
+      $scope.clear_all_intervals = function(){
+        if($scope.myIntervals['privateMessage']){
+          $interval.cancel($scope.myIntervals['privateMessage']);
+        }
+        if($scope.myIntervals['drinkInvitation']){
+          $interval.cancel($scope.myIntervals['drinkInvitation']);
+        }
+      }
+
+      $scope.openFilters = function(){
+        var x = document.getElementsByClassName("tab-item tab-item-active");
+        if(x.length>0){
+          //ESTOY EN LISTADO
+          var activeTab = x[0];
+          var title = activeTab.firstElementChild.innerHTML;
+          if(title=="PERSONAS"){
+            $scope.setBackTo = "listado_people";
+            $ionicModal.fromTemplateUrl('templates/filter_people.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+                $scope.toggleFilterInteresadoEn($scope.filter.filter_people_interesado_en);
+            });
+          }else{
+            $scope.setBackTo = "listado_bar";
+            $ionicModal.fromTemplateUrl('templates/filter_bar.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+            });
+          }
+        }else{
+          $scope.setBackTo = "mapa";
+          $ionicModal.fromTemplateUrl('templates/filter_people.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+                $scope.toggleFilterInteresadoEn($scope.filter.filter_people_interesado_en);
+            });
+        }
+      }
+
+      $scope.toggleFilterInteresadoEn = function(interest){
+        var x = document.getElementsByClassName("filter_interesado_en");
+        var i;
+        for (i = 0; i < x.length; i++) {
+            x[i].classList.remove('active');
+        }
+        var button_id = "";
+        if(interest=="Hombres"){
+          button_id = "filter_interesado_en_hombres";
+        }
+        if(interest=="Mujeres"){
+          button_id = "filter_interesado_en_mujeres";
+        }
+        if(interest=="Personas en general" || interest==""){
+          button_id = "filter_interesado_en_personas";
+        }
+        $scope.filter.filter_people_interesado_en = interest;
+        document.getElementById(button_id).classList.add('active');
+      }
+
+      $scope.go_back_from_filter_modal = function(){
+        $scope.loadPinsLayer();
+        if($scope.setBackTo == "mapa"){
+          ModalService.checkNoModalIsOpen();
+        }
+        if($scope.setBackTo == "listado_people"){
+          $scope.open_user_list(false);
+        }
+        if($scope.setBackTo == "listado_bar"){
+          $scope.open_user_list(true);
+        }
+      }
+
+      $scope.filterUsers = function(){
+          $scope.all_users.forEach(function(user,key){
+            user.filtered=false;
+            if($scope.filter.filter_people_distance_range>0){
+              if(parseFloat(user.distance)>parseFloat($scope.filter.filter_people_distance_range)){
+                user.filtered=true;
+              }
+            }
+            if($scope.filter.filter_people_online==true){
+              if(user.online_status!="Online"){
+                user.filtered=true;
+              }
+            }
+            if($scope.filter.filter_people_interesado_en=="Hombres"){
+              if(user.gender!="Hombre"){
+                user.filtered=true;
+              }
+            }
+            if($scope.filter.filter_people_interesado_en=="Mujeres"){
+              if(user.gender!="Mujer"){
+                user.filtered=true;
+              }
+            }
+          });
+      }
+
+      $scope.filterBars = function(){
+          $scope.all_bars.forEach(function(bar,key){
+            bar.filtered=false;
+            if($scope.filter.filter_bar_distance_range>0){
+              if(parseFloat(bar.distance)>parseFloat($scope.filter.filter_bar_distance_range)){
+                bar.filtered=true;
+              }
+            }
+            if($scope.filter.filter_bar_open==true){
+              if(bar.status!="Abierto"){
+                bar.filtered=true;
+              }
+            }
+          });
+      }
+
+      $scope.pinIsNotFiltered = function(layer){
+          var result = true;
+          if(layer.feature.properties.Type=="Person"){
+            if($scope.filter.filter_people_distance_range>0){
+              if(parseFloat(layer.feature.properties.Distance)>parseFloat($scope.filter.filter_people_distance_range)){
+                result=false;
+              }
+            }
+            if($scope.filter.filter_people_online==true){
+              if(layer.feature.properties.Online_status!="Online"){
+                result=false;
+              }
+            }
+            if($scope.filter.filter_people_interesado_en=="Hombres"){
+              if(layer.feature.properties.Gender!="Hombre"){
+                result=false;
+              }
+            }
+            if($scope.filter.filter_people_interesado_en=="Mujeres"){
+              if(layer.feature.properties.Gender!="Mujer"){
+                result=false;
+              }
+            }
+          }else if(layer.feature.properties.Type=="Bar"){
+            if($scope.filter.filter_bar_distance_range>0){
+              if(parseFloat(layer.feature.properties.Distance)>parseFloat($scope.filter.filter_bar_distance_range)){
+                result=false;
+              }
+            }
+            if($scope.filter.filter_bar_open==true){
+              if(layer.feature.properties.Status!="Abierto"){
+                result=false;
+              }
+            }
+          }
+          return result;
+      }
+
+      $scope.view_profile = function(uid,back_to){
+        $scope.setBackTo=back_to;
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          MessageService.getUserInfo(uid).then(function(resp){
+            $scope.profile = new Array();
+            $scope.profile.other_user = new Array();
+            if($scope.getObjectDataFromResponse(resp).Photo){
+              $scope.profile.other_user.picture_url = $scope.getObjectDataFromResponse(resp).Photo;
+            }else{
+              $scope.profile.other_user.picture_url = "./img/icon-user-anonymous.png";
+            }
+            $scope.profile.other_user.uid = uid;
+            $scope.profile.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
+            $scope.profile.other_user.online_status = $scope.getObjectDataFromResponse(resp).Online_status;
+            $scope.profile.other_user.estado = $scope.getObjectDataFromResponse(resp).Estado;
+            $scope.profile.other_user.posts = $scope.getObjectDataFromResponse(resp).Posts;
+            $scope.profile.other_user.photos = $scope.getObjectDataFromResponse(resp).Photos;
+            $ionicModal.fromTemplateUrl('templates/profile_other.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+            });
+          });
+        }
+      }
+
+      $scope.view_bar_profile = function(nid,back_to){
+        $scope.setBackTo=back_to;
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          BarService.getBarInfo(nid).then(function(resp){
+            $scope.profile = new Array();
+            $scope.profile.bar = $scope.getObjectDataFromResponse(resp);
+            /*if($scope.getObjectDataFromResponse(resp).Photo){
+              $scope.profile.other_user.picture_url = $scope.getObjectDataFromResponse(resp).Photo;
+            }else{
+              $scope.profile.other_user.picture_url = "./img/icon-user-anonymous.png";
+            }
+            $scope.profile.other_user.uid = uid;
+            $scope.profile.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
+            $scope.profile.other_user.online_status = $scope.getObjectDataFromResponse(resp).Online_status;
+            $scope.profile.other_user.estado = $scope.getObjectDataFromResponse(resp).Estado;
+            $scope.profile.other_user.posts = $scope.getObjectDataFromResponse(resp).Posts;
+            $scope.profile.other_user.photos = $scope.getObjectDataFromResponse(resp).Photos;*/
+            $ionicModal.fromTemplateUrl('templates/profile_bar.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+            });
+          });
+        }
+      }
+
+      $scope.view_my_profile = function(){
+        $scope.setBackTo="mapa";
+        if(SemaphoreService.takeIfAvailable("open-modal")){
+          document.getElementById("spinner").style.display = "block";
+          MessageService.getUserInfo(UserService.uid).then(function(resp){
+            $scope.profile = new Array();
+            $scope.profile.other_user = new Array();
+            if($scope.getObjectDataFromResponse(resp).Photo){
+              $scope.profile.other_user.picture_url = $scope.getObjectDataFromResponse(resp).Photo;
+            }else{
+              $scope.profile.other_user.picture_url = "./img/icon-user-anonymous.png";
+            }
+            $scope.profile.other_user.uid = $scope.getObjectDataFromResponse(resp).uid;
+            $scope.profile.other_user.username = $scope.getObjectDataFromResponse(resp).Name;
+            $scope.profile.other_user.online_status = $scope.getObjectDataFromResponse(resp).Online_status;
+            $scope.profile.other_user.estado = $scope.getObjectDataFromResponse(resp).Estado;
+            $scope.profile.other_user.posts = $scope.getObjectDataFromResponse(resp).Posts;
+            $scope.profile.other_user.photos = $scope.getObjectDataFromResponse(resp).Photos;
+            $ionicModal.fromTemplateUrl('templates/profile_my.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoModalIsOpen();
+                ModalService.activeModal = modal;
+                ModalService.activeModal.show();
+                SemaphoreService.makeAvailableAgain("open-modal");
+            });
+          });
+        }
+      }
+
+
+      $scope.show_galery = function(){
+        if(SemaphoreService.takeIfAvailable("open-secondary-modal")){
+          document.getElementById("spinner").style.display = "block";
+          $ionicModal.fromTemplateUrl('templates/gallery.html', {
+            scope: $scope,
+            hardwareBackButtonClose: true,
+            animation: 'none',
+            backdropClickToClose: true
+            //focusFirstInput: true
+          }).then(function(modal) {
+              document.getElementById("spinner").style.display = "none";
+              ModalService.checkNoSecondaryModalIsOpen();
+              ModalService.activeModalSecondary = modal;
+              ModalService.activeModalSecondary.show();
+              SemaphoreService.makeAvailableAgain("open-secondary-modal");
+          });
+        }
+      };
+
+      $scope.show_post = function(post){
+          //console.log("POST: ");
+          //console.log(post);
+          $scope.selected_post = post;
+          if(SemaphoreService.takeIfAvailable("open-secondary-modal")){
+            document.getElementById("spinner").style.display = "block";
+            $ionicModal.fromTemplateUrl('templates/post.html', {
+              scope: $scope,
+              hardwareBackButtonClose: true,
+              animation: 'none',
+              backdropClickToClose: true
+              //focusFirstInput: true
+            }).then(function(modal) {
+                document.getElementById("spinner").style.display = "none";
+                ModalService.checkNoSecondaryModalIsOpen();
+                ModalService.activeModalSecondary = modal;
+                ModalService.activeModalSecondary.show();
+                SemaphoreService.makeAvailableAgain("open-secondary-modal");
+            });
+          }
+      }
+
+      $scope.close_secondary_modal = function(){
+        ModalService.checkNoSecondaryModalIsOpen();
+      }
+
+      $scope.do_nothing = function(){
+
+      }
 
   }
 

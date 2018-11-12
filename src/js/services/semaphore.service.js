@@ -6,6 +6,8 @@ pmb_im.services.factory('SemaphoreService', [function() {
   semaphoreObj.semaphores['submit-form'] = "available";
   semaphoreObj.semaphores['submit-location'] = "available";
   semaphoreObj.semaphores['can_talk'] = "available";
+  semaphoreObj.semaphores['open-secondary-modal'] = "available";
+
 
 
 

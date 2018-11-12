@@ -1,0 +1,27 @@
+<ion-modal-view class="user-map-popup">
+  <div ng-if="selected_person.warning!=null" class="warning">
+    <div class="warning-person"></div>
+    <div class="warning-text">{{selected_person.warning}}</div>
+  </div>
+  <div class="user-map-popup-details">
+    <div ng-click="close_active_modal()" class="user-map-popup-details-close">X</div>
+    <div class="user-map-popup-details-photo" ng-click="view_profile(selected_person.Uid,'mapa');">
+      <img src="{{selected_person.Icon}}" class="personIcon" />
+      <div ng-if="selected_person.Online_status=='Online'" class="onlineCircleInsidePopup"></div>
+    </div>
+    <div class="user-map-popup-details-name">
+      {{selected_person.Name}}
+    </div>
+    <div class="user-map-popup-details-interested">
+      Intereses: {{selected_person.InterestedIn}}
+    </div>
+    <div class="user-map-popup-details-buttons">
+      <div class="user-map-popup-details-talk-button" ng-click="send_message_to('{{selected_person.Uid}}');">
+        HABLAR
+      </div>
+      <div class="user-map-popup-details-invite-button" ng-click="openInvitationsModal('{{selected_person.Uid}}');">
+        INVITAR
+      </div>
+    </div>
+  </div>
+</ion-modal-view>

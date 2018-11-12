@@ -1,0 +1,35 @@
+<ion-modal-view class="app_modal">
+  <ion-content>
+    <div style="background: url({{profile.other_user.picture_url}}) no-repeat center;" class="profile_user_picture" ng-click="show_galery({{profile.other_user.uid}});"></div>
+    <div class="profile_user_add_photo">+</div>
+    <div class="profile_user_name">{{profile.other_user.username}}</div>
+    <div class="profile_user_online_status {{profile.other_user.online_status}}">{{profile.other_user.online_status}}</div>
+    <div class="profile_user_estado">{{profile.other_user.estado}}</div>
+    <ion-scroll direction="y" class="profile_posts_my" delegate-handle="content">
+        <div ng-click="show_post(post);" ng-repeat="post in profile.other_user.posts track by $index" class="post">
+          <div style="background: url({{post.image}}) no-repeat center;" class="profile_post_image"></div>
+          <div class="profile_post_text">{{post.text}}</div>
+        </div>
+        <div style="height: 20px"></div>
+    </ion-scroll>
+    <div class="profile_user_add_post">CREAR POST</div>
+    <div id="foot_bar" class="foot-bar">
+      <div class="options-bar">
+        <div id="button_general" class="menu_button general" ng-click="close_active_modal();">
+          General
+        </div>
+        <div id="button_chat" class="menu_button chat" ng-click="open_chat_modal();">
+          Chat
+        </div>
+        <div id="button_notifications" class="menu_button notificaciones" ng-click="open_notifications_modal();">
+          Notificaciones
+        </div>
+        <div class="menu_button mi_perfil active">
+          Mi Perfil
+        </div>
+      </div>
+      <div id="user-options-menu">
+      </div>
+    </div>
+  </ion-content>
+</ion-modal-view>

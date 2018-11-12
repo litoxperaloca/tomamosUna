@@ -1,0 +1,64 @@
+<ion-modal-view class="chats_modal user_list">
+  <ion-content>
+    <div class="chats_app_name">{{AppName}}</div>
+    <div class="map-options">
+      <div class="userlist filter-button">
+        <div class="filter-text" ng-click="openFilters();">FILTRAR</div>
+      </div>
+      <div class="userlist map-button" ng-click="close_active_modal();">
+        <div class="list-text">MAPA</div>
+      </div>
+    </div>
+    <div class="user_list_tabs">
+      <ion-tabs class="tabs-positive tabs-icon-top" selectedIndex="0">
+
+        <ion-tab title="PERSONAS">
+          <ion-scroll direction="y" class="scroll_inside_tabs" delegate-handle="content">
+            <div ng-if="user.filtered==false" ng-repeat="user in all_users track by $index" class="user_inside_list">
+              <div class="user_list_user_photo" style="background-image: url('{{user.picture_url}}');" ng-click="view_profile(user.uid,'listado_people');"></div>
+              <div class="user_list_user_name">{{user.name}}</div>
+              <div class="user_list_user_onlinestatus {{user.online_status}}">{{user.online_status}}</div>
+              <div ng-if="user.can_talk == 1" class="user_list_invite_button_alone" ng-click="send_message_to(user.uid);">CHAT</div>
+              <div ng-if="user.can_talk == 0" class="user_list_invite_button_alone" ng-click="openInvitationsModal(user.uid);">INVITAR</div>
+
+            </div>
+            <div style="height: 20px"></div>
+          </ion-scroll>
+        </ion-tab>
+
+        <ion-tab id="barTab" title="BARES">
+          <ion-scroll direction="y" class="scroll_inside_tabs" delegate-handle="content">
+            <div ng-if="bar.filtered==false" ng-click="openBarProfile({{bar.nid}});" ng-repeat="bar in all_bars track by $index" class="user_inside_list">
+              <div class="user_list_user_photo" style="background-image: url('{{bar.picture_url}}');"></div>
+              <div class="user_list_user_name">{{bar.name}}</div>
+              <div class="user_list_user_onlinestatus {{bar.status}}">{{bar.status}}</div>
+              <div class="bar_list_open"></div>
+            </div>
+            <div style="height: 20px"></div>
+          </ion-scroll>
+        </ion-tab>
+
+      </ion-tabs>
+    </div>
+
+      <div id="foot_bar" class="foot-bar">
+      <div class="options-bar">
+        <div id="button_general" class="menu_button general active" ng-click="close_active_modal();">
+          General
+        </div>
+        <div id="button_chat" class="menu_button chat" ng-click="open_chat_modal();">
+          Chat
+        </div>
+        <div id="button_notifications" class="menu_button notificaciones" ng-click="open_notifications_modal();">
+          Notificaciones
+        </div>
+        <div class="menu_button mi_perfil" ng-click="view_my_profile();">
+          Mi Perfil
+        </div>
+      </div>
+      <div id="user-options-menu">
+      </div>
+    </div>
+    </ion-content>
+    <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
+</ion-modal-view>

@@ -1,0 +1,29 @@
+<ion-modal-view class="app_modal">
+  <ion-content>
+    <div class="chat_top_bar">
+      <div class="back_button" ng-click="go_back_from_filter_modal();"></div>
+    </div>
+    <div style="background: url({{profile.bar.Photo}}) no-repeat center;" class="profile_bar_picture"></div>
+    <div class="profile_bar_name">{{profile.bar.Name}}</div>
+    <div class="profile_bar_open_status {{profile.bar.OpenStatus}}">{{profile.bar.OpenStatus}}</div>
+    <div class="profile_bar_button" >SEGUIR</div>
+    <div class="profile_title_eventos" >Eventos</div>
+    <ion-scroll direction="y" class="profile_eventos" delegate-handle="content">
+      <div ng-click="show_post(evento);" ng-repeat="evento in profile.bar.Eventos track by $index" class="evento">
+        <div style="background: url({{evento.image}}) no-repeat center;" class="profile_evento_image"></div>
+        <div class="profile_evento_title">{{evento.title}}</div>
+        <div class="profile_evento_text">{{evento.text}}</div>
+      </div>
+      <div style="height: 20px"></div>
+    </ion-scroll>
+    <ion-scroll direction="y" class="profile_menu" delegate-handle="content">
+      <div id="drink_nid_{{drink.nid}}" ng-click="select_drink_to_invite('{{drink.nid}}');" ng-repeat="drink in profile.bar.Menu track by $index" class="barmenu drink">
+        <div class="drink_name">
+          {{drink.name}}
+        </div>
+        <div class="drink_cost">${{drink.cost}}</div>
+      </div>
+      <div style="height: 250px"></div>
+    </ion-scroll>>
+  </ion-content>
+</ion-modal-view>

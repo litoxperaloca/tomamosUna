@@ -1,0 +1,8 @@
+<ion-modal-view class="app_modal_secondary">
+  <ion-content>
+    <ion-slide-box on-slide-changed="slideHasChanged($index)">
+	    <ion-slide ng-click="close_secondary_modal();" class="gallery_photo_slide" ng-repeat="photo in profile.other_user.photos track by $index">
+        <div ng-click="do_nothing();" style="background: url({{photo}}) no-repeat center;" class="gallery_photo"></div>
+	    </ion-slide>
+  </ion-content>
+</ion-modal-view>

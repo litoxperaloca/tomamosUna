@@ -3,73 +3,52 @@
 <ion-nav-title>
 </ion-nav-title>
 
+
+  <div ng-click="openNotification({{notification}})" id="notification_{{notification.nid}}" class="notification" ng-repeat="notification in notifications track by $index">
+    <div class="notification-drink"></div>
+    <div class="notification-text">{{notification.titulo}}</div>
+    <!--<div class="notification-action" ng-click="openNotification({{notification}})">
+      Abrir
+    </div>
+    <div class="notification-action-close" ng-click="closeNotification({{notification}})">
+      Cerrar
+    </div>-->
+  </div>
+
+
 <div id="spinner" class="intro-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
 <div id="pinspinner" class="intro-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
 
-<!--<div class="top-bar-imm">
-  <div class="white-bar-imm"></div>
-  <div class="icon-imm-top"/></div>
-</div>-->
+<div class="app_name">{{AppName}}</div>
 
-
-<ion-content data-tap-disabled="true">
-  <leaflet defaults="map.defaults" center="map.center" markers="map.markers" ng-if="map"></leaflet>
-</ion-content>
-
-<div id="notifications">
-  <div id="notification_{{notification.nid}}" class="notification_item" ng-repeat="notification in notifications track by $index">
-    <p class="text">{{notification.titulo}} - {{notification.username}}</p>
-    <p class="date">{{timeConverter(notification.created)}}</p>
-    <div class="actions">
-      <div class="action" ng-click="openNotification({{notification}})">
-        Abrir
-      </div>
-      <div class="action" ng-click="closeNotification({{notification}})">
-        Cerrar
-      </div>
-    </div>
+<div class="map-options">
+  <div class="filter-button">
+    <div class="filter-text" ng-click="openFilters();">FILTRAR</div>
+  </div>
+  <div class="list-button" ng-click="open_user_list(false);">
+    <div class="list-text">LISTADO</div>
   </div>
 </div>
 
 
+<ion-content data-tap-disabled="true">
+  <leaflet layers="map.layers" defaults="map.defaults" center="map.center" markers="map.markers" ng-if="map"></leaflet>
+</ion-content>
+
+
 <div id="foot_bar" class="foot-bar">
-  <!--<div class="street-search-bar">
-    <div class="search-icon"></div>
-    <label class="search-textbox-label">
-        <input ion-autocomplete type="text" id="search-textbox" readonly="readonly" class="ion-autocomplete" autocomplete="off"
-               ng-model="model"
-               external-model="externalModel"
-               selected-items="selectedItems"
-               search-items="preselectedSearchItems"
-               item-value-key="lat"
-               item-view-value-key="address"
-               items-method="searchLocation(query)"
-               placeholder="Ir a: escribir calle."
-               items-clicked-method="itemsClicked(callback)"
-               items-removed-method="itemsRemoved(callback)"
-               cancel-button-clicked-method="itemsCanceled(callback)"
-               max-selected-items="1"
-               select-items-label="Seleccione una calle"
-               manage-externally="true"
-               selected-items-label="Calle"
-               cancel-label="Volver"/>
-    </label>
-  </div>-->
   <div class="options-bar">
-    <!--<div id="button-report" class="option-active">
-      <div class="button-report" ng-click="new_report(0)"></div>
+    <div id="button_general" class="menu_button general" ng-click="close_active_modal();">
+      General
     </div>
-    <div id="button-list-reports" class="option-inactive">
-      <div class="button-list-reports" ng-click="list_reports()"></div>
+    <div id="button_chat" class="menu_button chat" ng-click="open_chat_modal();">
+      Chat
     </div>
-    <div id="button-faq" class="option-inactive">
-      <div class="button-faq" ng-click="help()"></div>
+    <div id="button_notifications" class="menu_button notificaciones" ng-click="open_notifications_modal();">
+      Notificaciones
     </div>
-    <div id="button-find-me" class="option-inactive">
-      <div class="button-find-me" ng-click="find_me()"></div>
-    </div>-->
-    <div class="user-options">
-      <div id="user_picture" class="user-picture" style="background: url({{user_cached_image}}) no-repeat center;"  ng-click="user_options()"></div>
+    <div class="menu_button mi_perfil" ng-click="view_my_profile();">
+      Mi Perfil
     </div>
   </div>
   <div id="user-options-menu">

@@ -1,0 +1,20 @@
+<ion-modal-view class="app_modal">
+  <ion-content>
+    <div class="chat_top_bar">
+      <div class="back_button" ng-click="go_back_from_filter_modal();"></div>
+    </div>
+    <div style="background: url({{profile.other_user.picture_url}}) no-repeat center;" class="profile_user_picture" ng-click="show_galery({{profile.other_user.uid}});"></div>
+    <div class="profile_user_name">{{profile.other_user.username}}</div>
+    <div class="profile_user_online_status {{profile.other_user.online_status}}">{{profile.other_user.online_status}}</div>
+    <div class="profile_user_estado">{{profile.other_user.estado}}</div>
+    <div ng-if="canTalkToUser(profile.other_user.uid)==true" class="profile_chat_button" ng-click="send_message_to({{profile.other_user.uid}});">CHAT</div>
+    <div ng-if="canTalkToUser(profile.other_user.uid)==false" class="profile_chat_button" ng-click="openInvitationsModal('{{profile.other_user.uid}}');">INVITAR</div>
+    <ion-scroll direction="y" class="profile_posts" delegate-handle="content">
+      <div ng-click="show_post(post);" ng-repeat="post in profile.other_user.posts track by $index" class="post">
+        <div style="background: url({{post.image}}) no-repeat center;" class="profile_post_image"></div>
+        <div class="profile_post_text">{{post.text}}</div>
+      </div>
+      <div style="height: 20px"></div>
+    </ion-scroll>
+  </ion-content>
+</ion-modal-view>

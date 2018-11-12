@@ -1,0 +1,17 @@
+<ion-modal-view class="app_modal">
+  <ion-content>
+    <div class="chat_top_bar">
+      <div class="back_button" ng-click="go_back_from_filter_modal();"></div>
+    </div>
+    <div class="filters">
+      <div class="filter_online_txt">Mostrar sólo bares abiertos</div>
+      <ion-toggle class="filter_people_online_toggle" ng-model="filter.filter_bar_open"></ion-toggle>
+      <div class="filter_rango_de_txt">Buscar bares en un rango de</div>
+      <input type="range" class="filter_people_range" name="rangeBar" value="{{filter.filter_bar_distance_range}}" min="0" max="100" ng-model="filter.filter_bar_distance_range">
+
+      <div class="filter_rango_de_value_txt">{{filter.filter_bar_distance_range}} km <span ng-if="filter.filter_bar_distance_range == 0">(Todos los bares)</span></div>
+      <div class="filter_save_button" ng-click="go_back_from_filter_modal();">GUARDAR</div>
+
+    </div>
+  </ion-content>
+</ion-modal-view>

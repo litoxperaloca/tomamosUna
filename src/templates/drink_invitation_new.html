@@ -1,0 +1,30 @@
+<ion-modal-view class="app_modal">
+    <div ng-if="invitation.warning!=null" class="warning">
+      <div class="warning-money"></div>
+      <div class="warning-text"><span style="font-size: 13px;">{{invitation.warning}}</span>{{invitation.warning_sub}}</div>
+    </div>
+    <div class="chat_top_bar">
+      <div class="back_button" ng-click="openInvitationsModal('{{invitation.other_user.uid}}');"></div>
+      <div class="chat_other_user_name">{{invitation.other_user.username}}</div>
+      <div class="chat_other_user_online_status {{invitation.other_user.online_status}}">{{invitation.other_user.online_status}}</div>
+      <div class="chat_other_user_picture" style="background: url({{invitation.other_user.picture_url}}) no-repeat center;"></div>
+      <div class="invitation_user_credits">
+        Créditos diponibles: {{invitation.user_credits}}
+      </div>
+    </div>
+    <ion-scroll direction="y" class="private_chat_scroll" style="top: 140px !important;">
+      <div id="drink_nid_{{drink.Nid}}" ng-click="select_drink_to_invite('{{drink.Nid}}');" ng-repeat="drink in invitation.available_drinks track by $index" class="invitation drink">
+        <div class="drink_name">
+          {{drink.Nombre}}
+        </div>
+        <div class="drink_cost">{{drink.Credits}}</div>
+      </div>
+      <div style="height: 250px"></div>
+    </ion-scroll>
+    <div class="new_drink_invitation_div">
+      <div class="new_drink_invitation_button" ng-click="send_invitation();">
+        ENVIAR
+      </div>
+    </div>
+    <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
+</ion-modal-view>

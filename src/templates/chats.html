@@ -1,0 +1,35 @@
+<ion-modal-view class="chats_modal">
+  <ion-content>
+    <div class="chats_app_name">{{AppName}}</div>
+      <ion-scroll direction="y" class="private_chat_scroll" delegate-handle="content">
+        <div ng-click="send_message_to(message.uid);" ng-repeat="message in all_messages track by $index" class="user_with_message">
+          <div class="chats_user_photo" style="background-image: url('{{message.picture_url}}');"></div>
+          <div class="chats_user_name">{{message.name}}</div>
+          <div class="chats_user_text">{{message.lastMessage}}</div>
+          <div  class="chats_user_date">
+            {{timeConverter(message.created)}}
+          </div>
+        </div>
+        <div style="height: 20px"></div>
+      </ion-scroll>
+      <div id="foot_bar" class="foot-bar">
+      <div class="options-bar">
+        <div id="button_general" class="menu_button general" ng-click="close_active_modal();">
+          General
+        </div>
+        <div id="button_chat" class="menu_button chat active">
+          Chat
+        </div>
+        <div id="button_notifications" class="menu_button notificaciones" ng-click="open_notifications_modal();">
+          Notificaciones
+        </div>
+        <div class="menu_button mi_perfil" ng-click="view_my_profile();">
+          Mi Perfil
+        </div>
+      </div>
+      <div id="user-options-menu">
+      </div>
+    </div>
+    </ion-content>
+    <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
+</ion-modal-view>

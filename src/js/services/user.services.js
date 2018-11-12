@@ -1,6 +1,6 @@
-pmb_im.services.factory('UserService', ['$http', function($http) {
+pmb_im.services.factory('UserService', ['$http', 'ConfigService', function($http, ConfigService) {
 
-  //var baseURL = "http://pmbuy.development.datauy.org/auth/ajax/";
+  var apiURL = ConfigService.baseURL + "/api/"
   var UserObj = {};
   UserObj.uid = null;
   UserObj.name = null;
@@ -9,6 +9,10 @@ pmb_im.services.factory('UserService', ['$http', function($http) {
   UserObj.picture_url = "url(./img/icon-user-anonymous.png)";
   UserObj.show_location = null;
 
+  UserObj.getUserList = function(username,password,uid,author_uid){
+    var body = 'user='+username+'&password='+password+'&hash_id='+Math.random();
+    return $http.post(apiURL + 'get_user_list', body,{headers: {'Content-Type': 'application/x-www-form-urlencoded'}});
+  }
 
   UserObj.save_user_data = function (user_name, user_password, user_picture_url, show_location, uid, status, gender, interested) {
       UserObj.uid = uid;

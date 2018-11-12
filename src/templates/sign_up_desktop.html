@@ -1,6 +1,13 @@
-<ion-modal-view class="new-report-modal">
+<ion-modal-view class="login_modal">
     <ion-content class="new-report-scroll">
-        <div class="new-report-slide">
+      <div ng-if="login.warning!=null" class="warning">
+        <div class="warning-header">Error</div>
+        <div class="warning-text">{{login.warning}}</div>
+      </div>
+      <div class="login_app_name">
+        {{AppName}}
+      </div>
+        <div class="sign_up_slide">
           <div class="new-report-content">
             <div class="category-header">
               <h3>Regístrate y se parte</h3>
@@ -102,7 +109,7 @@
               <div class="padding">
                 <button class="form-button" ng-click="sign_up_ok()">Registrarse</button>
                 <div class="field-separator"></div>
-                <button class="form-button" ng-click="close_sign_up_modal()">Cancelar</button>
+                <button class="form-button" ng-click="show_login_modal()">Cancelar</button>
               </div>
             </div>
           </div>

@@ -1,18 +1,15 @@
 pmb_im.services.factory('ErrorService', ['$http','$ionicPopup', 'ValidationService', function($http,$ionicPopup,ValidationService) {
 
   return {
-    http_response_is_successful: function (jsonResult, errorContainerId) {
-      var errorDiv = document.getElementById(errorContainerId);
+    http_response_is_successful: function (jsonResult, warningObj) {
       if(jsonResult.data && jsonResult.data.Status=="success" || jsonResult.Status=="success"){
-        errorDiv.style.display = "none";
         return true;
       }else{
         if(jsonResult.data){
-          errorDiv.innerHTML="<h3>" + jsonResult.data.Message + "</h3>";
+          warningObj.warning = jsonResult.data.Message;
         }else{
-          errorDiv.innerHTML="<h3>" + jsonResult.Message + "</h3>";
+          warningObj.warning = jsonResult.Message;
         }
-        errorDiv.style.display = "block";
         return false;
       }
     },
@@ -78,41 +75,42 @@ pmb_im.services.factory('ErrorService', ['$http','$ionicPopup', 'ValidationServi
         return false;
     },
 
-    check_fields: function (fields, errorContainerId) {
+    check_fields: function (fields, warningObj) {
       var errors = "";
       fields.forEach(function(field) {
         if(field.type=="notNull"){
           if(!ValidationService.validate_not_empty(field.value)){
-            errors = errors + '<h3>- El campo "' + field.name + '" no puede estar vacío.</h3>';
+            errors = errors + 'El campo "' + field.name + '" no puede estar vacío. ';
           }
         }
         if(field.type=="email"){
           if(!ValidationService.validate_email(field.value)){
-            errors = errors + '<h3>- El campo "' + field.name + '" no es una dirección de correo válida.</h3>';
+            errors = errors + 'El campo "' + field.name + '" no es una dirección de correo válida. ';
           }
         }
         if(field.type=="iddoc_uy"){
           if(!ValidationService.validate_iddoc_uy(field.value)){
-            errors = errors + '<h3>- El campo "' + field.name + '" no es una cédula uruguaya válida.</h3>';
+            errors = errors + 'El campo "' + field.name + '" no es una cédula uruguaya válida. ';
           }
         }
         if(field.type=="two_words"){
           if(!ValidationService.validate_two_words(field.value)){
-            errors = errors + '<h3>- El campo "' + field.name + '" debe contener al menos dos palabras.</h3>';
+            errors = errors + 'El campo "' + field.name + '" debe contener al menos dos palabras. ';
           }
         }
         if(field.type=="equalsTo"){
           if(!ValidationService.validate_equalsTo(field.value, field.secondValue)){
-            errors = errors + '<h3>- Los campos "' + field.name + '" no coinciden.</h3>';
+            errors = errors + 'Los campos "' + field.name + '" no coinciden. ';
           }
         }
       });
       if(errors ==""){
         return true;
       }else{
-        var errorDiv = document.getElementById(errorContainerId);
+        warningObj.warning = errors;
+        /*var errorDiv = document.getElementById(errorContainerId);
         errorDiv.innerHTML= errors;
-        errorDiv.style.display = "block";
+        errorDiv.style.display = "block";*/
         return false;
       }
     }

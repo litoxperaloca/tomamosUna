@@ -1,0 +1,15 @@
+<ion-modal-view class="user-map-popup">
+  <div ng-if="selected_bar.warning!=null" class="warning">
+    <div class="warning-bar"></div>
+    <div class="warning-text">{{selected_bar.warning}}</div>
+  </div>
+  <div class="user-map-popup-details">
+    <div ng-click="close_active_modal()" class="user-map-popup-details-close">X</div>
+    <div class="user-map-popup-details-photo">
+      <img ng-click="view_bar_profile('{{selected_bar.Nid}}','mapa');" src="{{selected_bar.Icon}}" class="personIcon" />
+    </div>
+    <div class="user-map-popup-details-name">
+      {{selected_bar.Name}}
+    </div>
+  </div>
+</ion-modal-view>

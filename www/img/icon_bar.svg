@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="33" height="47" viewBox="0 0 33 47">
+    <defs>
+        <filter id="a" width="154.5%" height="250%" x="-27.3%" y="-75%" filterUnits="objectBoundingBox">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="1"/>
+        </filter>
+    </defs>
+    <g fill="none" fill-rule="evenodd">
+        <path fill="#6F6969" d="M14 45l11-2.146L15.896 41z" filter="url(#a)"/>
+        <path fill="#31313D" d="M16.01 43.188c.16 0 16.01-17.815 16.01-26.843C32.02 7.318 24.852 0 16.01 0 7.168 0 0 7.318 0 16.345c0 9.028 15.85 26.843 16.01 26.843z"/>
+        <path fill="#FFF" fill-rule="nonzero" d="M23.872 12.72c.274-.266.08-.72-.308-.72H9.436c-.388 0-.582.454-.307.72l6.501 6.307v4.786h-1.74c-.48 0-.87.378-.87.843 0 .466.39.844.87.844h5.22c.48 0 .87-.378.87-.844a.858.858 0 0 0-.87-.843h-1.74v-4.786l6.502-6.307zm-3.457.968L16.5 17.484l-3.914-3.796h7.829z"/>
+    </g>
+</svg>

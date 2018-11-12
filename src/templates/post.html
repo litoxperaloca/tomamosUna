@@ -1,0 +1,9 @@
+<ion-modal-view class="app_modal_secondary">
+  <ion-content>
+    <div ng-click="close_secondary_modal();" style="width: 100%; height: 100%">
+        <div ng-click="do_nothing();" class="gallery_title">{{selected_post.title}}</div>
+        <div ng-click="do_nothing();" style="background: url({{selected_post.image}}) no-repeat center;" class="gallery_photo"></div>
+        <div ng-click="do_nothing();" class="gallery_text">{{selected_post.text}}</div>
+    </div>
+  </ion-content>
+</ion-modal-view>

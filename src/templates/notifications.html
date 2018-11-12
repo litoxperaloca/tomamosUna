@@ -1,0 +1,34 @@
+<ion-modal-view class="chats_modal">
+  <ion-content>
+    <div class="chats_app_name">{{AppName}}</div>
+      <ion-scroll direction="y" class="private_chat_scroll" delegate-handle="content">
+        <div ng-click="openNotification({{notification}})" ng-repeat="notification in notifications track by $index" class="notification_inside_list">
+          <div class="chats_user_photo" style="background-image: url('{{notification.picture_url}}');"></div>
+          <div class="notification_inside_list_text">{{notification.titulo}}</div>
+          <div  class="notification_inside_list_date">
+            {{timeConverter(notification.created)}}
+          </div>
+        </div>
+        <div style="height: 20px"></div>
+      </ion-scroll>
+      <div id="foot_bar" class="foot-bar">
+      <div class="options-bar">
+        <div id="button_general" class="menu_button general" ng-click="close_active_modal();">
+          General
+        </div>
+        <div id="button_chat" class="menu_button chat" ng-click="open_chat_modal();">
+          Chat
+        </div>
+        <div id="button_notifications" class="menu_button notificaciones active">
+          Notificaciones
+        </div>
+        <div class="menu_button mi_perfil" ng-click="view_my_profile();">
+          Mi Perfil
+        </div>
+      </div>
+      <div id="user-options-menu">
+      </div>
+    </div>
+    </ion-content>
+    <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
+</ion-modal-view>

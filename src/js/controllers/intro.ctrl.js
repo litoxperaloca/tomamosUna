@@ -5,10 +5,16 @@ pmb_im.controllers.controller('IntroCtrl', ['$scope', '$state',
   '$ionicPopup',
   'LocationsService',
   'DBService',
-  function($scope, $state, $cordovaGeolocation, $stateParams, $ionicPlatform, $ionicPopup, LocationsService, DBService) {
+  'ConfigService',
+  'UserService',
+  function($scope, $state, $cordovaGeolocation, $stateParams, $ionicPlatform, $ionicPopup, LocationsService, DBService, ConfigService, UserService) {
 
   var db = DBService.initDB();
-  db.info().then(console.log.bind(console));
+  db.info().then(
+    console.log.bind(console)
+  );
+  $scope.AppName = ConfigService.AppName;
+
 
   $scope.geolocate = function() {
 
@@ -24,11 +30,7 @@ pmb_im.controllers.controller('IntroCtrl', ['$scope', '$state',
     };
 
    $scope.$on('$ionicView.enter', function(){ //This is fired twice in a row
-      if(LocationsService.council_modal!=null){
-        LocationsService.council_modal.hide();
-        LocationsService.council_modal.remove();
-      }
-       $scope.geolocate();
+      $scope.geolocate();
    });
 
   }

@@ -1,62 +1,53 @@
-<ion-modal-view class="private_chat_modal">
+<ion-modal-view class="app_modal">
     <div class="chat_top_bar">
-      <div class="chat_other_user_picture" style="background: url({{invitation.other_user.picture_url}}) no-repeat center;"></div>
+      <div class="back_button" ng-click="close_invitation_modal()"></div>
       <div class="chat_other_user_name">{{invitation.other_user.username}}</div>
-      <div ng-click="close_invitation_modal()" class="close_message_modal">X</div>
+      <div class="chat_other_user_online_status {{invitation.other_user.online_status}}">{{invitation.other_user.online_status}}</div>
+      <div class="chat_other_user_picture" style="background: url({{invitation.other_user.picture_url}}) no-repeat center;"></div>
     </div>
     <ion-scroll direction="y" class="private_chat_scroll">
       <div ng-repeat="invitationItem in invitation.invitations track by $index" class="invitation">
-        <div class="author">
-          Enviada por: {{getNameFromUidInvitation(invitationItem.uid)}}
-        </div>
-        <div class="text">
-          Bebida: {{invitationItem.drink}}
-        </div>
-        <div class="text">
-          Estado: {{invitationItem.status}}
-        </div>
-        <div class="date">
-          {{timeConverter(invitationItem.created)}}
-        </div>
+        <div ng-if="invitationItem.uid == invitation.my_uid" class="message_photo_my" style="background-image: url('{{invitation.my_picture_url}}');"></div>
+          <div ng-if="invitationItem.uid == invitation.other_user.uid" class="date_other">
+            {{timeConverter(invitationItem.created)}}
+          </div>
+          <div class="invitation_drink">
+            {{invitationItem.drink}}
+          </div>
+          <div ng-if="invitationItem.uid == invitation.my_uid" class="date_my">
+            {{timeConverter(invitationItem.created)}}
+          </div>
+          <div ng-if="invitationItem.uid == invitation.other_user.uid" class="message_photo_other" style="background-image: url('{{invitation.other_user.picture_url}}');"></div>
         <div ng-if="checkIfCanReplyInvitation(invitationItem)">
           <div class="invitation_button" ng-click="acceptInvitation({{invitationItem.nid}})">
             ACEPTAR
           </div>
-          <div class="invitation_button" ng-click="refuseInvitation({{invitationItem.nid}})">
+          <div class="invitation_button_cancel" ng-click="refuseInvitation({{invitationItem.nid}})">
             RECHAZAR
           </div>
         </div>
         <div ng-if="checkIfWaitingReplyFromInvitation(invitationItem)">
-          <div class="text" style="float: right; margin-right: 15px;">
+          <div class="text">
             Esperando respuesta de {{invitation.other_user.username}}
           </div>
         </div>
-        <div ng-if="canTalkToUser(invitation.other_user.uid)">
-          <div style="float: right;">
-            <img class="img_message_inside_invitation" ng-click="send_message_to({{invitation.other_user.uid}});" src="./img/message_icon.png" />
+        <div ng-if="invitationItem.status == 'Aceptada'">
+          <div class="text">
+            ACEPTADA
+          </div>
+        </div>
+        <div ng-if="invitationItem.status == 'Rechazada'">
+          <div class="text">
+            RECHAZADA
           </div>
         </div>
       </div>
       <div style="height: 250px"></div>
     </ion-scroll>
-    <div class="invitation_options">
-      <div class="new_drink_invitation">
-        <p><b>Nueva invitación</b></p>
-        <select ng-model="invitation.selected_drink">
-          <option value="" disabled selected>Seleccione una opción</option>
-          <option ng-repeat="drink in invitation.available_drinks track by $index" value="{{drink.Nid}}">{{drink.Nombre}}</option>
-        </select>
-        <div ng-if="invitation.selected_drink!=null" class="new_drink_cost">
-          Costo en créditos: {{getDrinkCostByNid(invitation.selected_drink)}}
-        </div>
-        <div ng-click="send_invitation()" class="invitation_button">
-            Enviar
-        </div>
+    <div class="new_drink_invitation_div">
+      <div class="new_drink_invitation_button" ng-click="openSingleInvitationModal('{{invitation.other_user.uid}}');">
+        NUEVA INVITACIÓN
       </div>
-      <div class="user_credits">
-        Créditos disponible: {{invitation.user_credits}}
-      </div>
-      <div id="error_container"></div>
     </div>
     <div id="spinner-inside-modal" class="modal-spinner"><ion-spinner icon="spiral"></ion-spinner></div>
 </ion-modal-view>
